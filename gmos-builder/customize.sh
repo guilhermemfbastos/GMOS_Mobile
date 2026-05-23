@@ -53,7 +53,7 @@ if [ -f /tmp/gmos_menu_icon.png ]; then
 
     # Encontra o ID do plugin do Whisker Menu no painel
     WHISKER_ID=""
-    for plugin_path in $(xfconf-query -c xfce4-panel -l 2>/dev/null | grep "plugin-" | grep -v "/"); do
+    for plugin_path in $(xfconf-query -c xfce4-panel -l 2>/dev/null | grep -E "^/plugins/plugin-[0-9]+$"); do
         plugin_type=$(xfconf-query -c xfce4-panel -p "$plugin_path" 2>/dev/null)
         if [ "$plugin_type" = "whiskermenu" ]; then
             WHISKER_ID=$(echo "$plugin_path" | grep -oP 'plugin-\K[0-9]+')
@@ -70,7 +70,7 @@ if [ -f /tmp/gmos_menu_icon.png ]; then
     else
         echo "[GMOS] AVISO: Whisker Menu não encontrado no painel. Tentando método alternativo..."
         # Tenta configurar para applicationsmenu (XFCE padrão)
-        for plugin_path in $(xfconf-query -c xfce4-panel -l 2>/dev/null | grep "plugin-" | grep -v "/"); do
+        for plugin_path in $(xfconf-query -c xfce4-panel -l 2>/dev/null | grep -E "^/plugins/plugin-[0-9]+$"); do
             plugin_type=$(xfconf-query -c xfce4-panel -p "$plugin_path" 2>/dev/null)
             if [ "$plugin_type" = "applicationsmenu" ]; then
                 APP_ID=$(echo "$plugin_path" | grep -oP 'plugin-\K[0-9]+')

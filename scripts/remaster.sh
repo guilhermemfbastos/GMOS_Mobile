@@ -85,6 +85,15 @@ resize2fs "${SYSTEM_IMG}"
 log_info "Montando system.img em modo R/W..."
 mount -o loop,rw "${SYSTEM_IMG}" "${SYSTEM_MOUNT}"
 
+# Detectar estrutura de diretórios (system-as-root vs tradicional)
+if [ -d "${SYSTEM_MOUNT}/system" ]; then
+    SYS_DIR="${SYSTEM_MOUNT}/system"
+    log_info "Estrutura system-as-root detectada. Diretório base: ${SYS_DIR}"
+else
+    SYS_DIR="${SYSTEM_MOUNT}"
+    log_info "Estrutura tradicional detectada. Diretório base: ${SYS_DIR}"
+fi
+
 # ============================================================
 # 5. TROCAR WALLPAPER PADRÃO
 # ============================================================
@@ -97,20 +106,23 @@ if [ -f "${WALLPAPER_SOURCE}" ]; then
 
     # O Android usa o wallpaper padrão de /system/framework/framework-res.apk
     # Mas a forma mais simples é sobrescrever diretamente os arquivos de wallpaper do sistema
-    FRAMEWORK_DIR="${SYSTEM_MOUNT}/system/framework"
+    FRAMEWORK_DIR="${SYS_DIR}/framework"
     
     # Copia o wallpaper para diferentes locais conhecidos do Android-x86
+    # Garante que o diretório etc existe
+    mkdir -p "${SYS_DIR}/etc"
+    
     # Local 1: /system/etc/ (usado por algumas builds)
-    cp "${WALLPAPER_SOURCE}" "${SYSTEM_MOUNT}/system/etc/default_wallpaper.png" 2>/dev/null || true
+    cp "${WALLPAPER_SOURCE}" "${SYS_DIR}/etc/default_wallpaper.png" 2>/dev/null || true
     
     # Local 2: Converte para JPG (formato esperado pelo framework)
-    convert "${WALLPAPER_SOURCE}" "${SYSTEM_MOUNT}/system/etc/default_wallpaper.jpg" 2>/dev/null || true
+    convert "${WALLPAPER_SOURCE}" "${SYS_DIR}/etc/default_wallpaper.jpg" 2>/dev/null || true
     
     # Permissões corretas
-    chmod 644 "${SYSTEM_MOUNT}/system/etc/default_wallpaper.png" 2>/dev/null || true
-    chmod 644 "${SYSTEM_MOUNT}/system/etc/default_wallpaper.jpg" 2>/dev/null || true
-    chown 0:0 "${SYSTEM_MOUNT}/system/etc/default_wallpaper.png" 2>/dev/null || true
-    chown 0:0 "${SYSTEM_MOUNT}/system/etc/default_wallpaper.jpg" 2>/dev/null || true
+    chmod 644 "${SYS_DIR}/etc/default_wallpaper.png" 2>/dev/null || true
+    chmod 644 "${SYS_DIR}/etc/default_wallpaper.jpg" 2>/dev/null || true
+    chown 0:0 "${SYS_DIR}/etc/default_wallpaper.png" 2>/dev/null || true
+    chown 0:0 "${SYS_DIR}/etc/default_wallpaper.jpg" 2>/dev/null || true
 
     log_info "Wallpaper customizado instalado com sucesso."
 else
@@ -173,9 +185,10 @@ zip -r -0 "${BUILD_DIR}/bootanimation.zip" desc.txt part0/ part1/
 cd "${WORKSPACE_DIR}"
 
 # Injeta no sistema
-cp "${BUILD_DIR}/bootanimation.zip" "${SYSTEM_MOUNT}/system/media/bootanimation.zip"
-chmod 644 "${SYSTEM_MOUNT}/system/media/bootanimation.zip"
-chown 0:0 "${SYSTEM_MOUNT}/system/media/bootanimation.zip"
+mkdir -p "${SYS_DIR}/media"
+cp "${BUILD_DIR}/bootanimation.zip" "${SYS_DIR}/media/bootanimation.zip"
+chmod 644 "${SYS_DIR}/media/bootanimation.zip"
+chown 0:0 "${SYS_DIR}/media/bootanimation.zip"
 log_info "Boot animation GM OS instalada."
 
 # ============================================================
@@ -189,7 +202,7 @@ log_info "Preparando overlay de ícones customizados..."
 #
 # Abordagem alternativa: substituir diretamente no SystemUI.apk
 # Os ícones de navegação ficam em:
-#   /system/priv-app/SystemUI/SystemUI.apk
+#   /priv-app/SystemUI/SystemUI.apk
 #   -> res/drawable-*dpi/ic_sysbar_back.png
 #   -> res/drawable-*dpi/ic_sysbar_home.png
 #   -> res/drawable-*dpi/ic_sysbar_recent.png
@@ -210,7 +223,7 @@ if [ -d "${ICONS_DIR}" ] && [ "$(ls -A "${ICONS_DIR}" 2>/dev/null)" ]; then
         chmod +x /usr/local/bin/apktool
     }
     
-    SYSTEMUI_APK="${SYSTEM_MOUNT}/system/priv-app/SystemUI/SystemUI.apk"
+    SYSTEMUI_APK="${SYS_DIR}/priv-app/SystemUI/SystemUI.apk"
     if [ -f "${SYSTEMUI_APK}" ]; then
         SYSTEMUI_WORK="${BUILD_DIR}/systemui_work"
         

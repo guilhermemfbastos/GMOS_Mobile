@@ -35,7 +35,7 @@ fi
 
 if [ -n "$DEPS_TO_INSTALL" ]; then
     log_info "Instalando dependências ausentes: $DEPS_TO_INSTALL..."
-    sudo apt-get update
+    sudo apt-get update || true
     sudo apt-get install -y $DEPS_TO_INSTALL
 else
     log_info "Todas as dependências já estão instaladas."

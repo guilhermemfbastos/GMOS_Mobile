@@ -89,11 +89,13 @@ else
         fi
     fi
 
-    # Verificar se conseguimos obter a ISO
-    if [ ! -f "$ISO_PATH" ] || [ ! -s "$ISO_PATH" ]; then
-        log_error "Erro: Não foi possível obter o arquivo GM-OS-Mobile.iso por nenhum método!"
-        log_error "Como a trava de compilação está ativa, você precisa colocar um arquivo ISO válido em 'output/GM-OS-Mobile.iso' manualmente ou executar a Action 'GM OS Mobile ISO Build' no GitHub para gerar o primeiro build."
-        rm -f "$ISO_PATH" # Remove arquivo vazio se houver
+    # Verificar se conseguimos obter a ISO e se ela tem um tamanho mínimo aceitável (ex: 100MB)
+    if [ ! -f "$ISO_PATH" ] || [ $(stat -c%s "$ISO_PATH" 2>/dev/null || echo 0) -lt 104857600 ]; then
+        log_error "Erro: O arquivo ISO obtido é inválido, inexistente ou incompleto!"
+        log_error "Como a trava de compilação está ativa localmente, você deve:"
+        log_error "1. Executar a Action 'GM OS Mobile ISO Build' no GitHub para compilar a ISO na nuvem;"
+        log_error "2. Ou colocar uma ISO de teste válida em 'output/GM-OS-Mobile.iso' manualmente."
+        rm -f "$ISO_PATH" # Remove o arquivo inválido/HTML de erro
         exit 1
     fi
 fi

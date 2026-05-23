@@ -133,10 +133,12 @@ sleep 1
 
 # 7. Iniciar QEMU
 log_info "Iniciando QEMU em background (headless)..."
-# -vnc :0 configura o VNC na porta 5900
-# -daemonize roda em background
+# Remove o log de boot antigo
+rm -f qemu_boot.log
+
+# Roda com redirecionamento de logs em segundo plano
 sudo qemu-system-x86_64 \
-  -m 1536 \
+  -m 2048 \
   -smp $QEMU_SMP \
   $QEMU_ACCEL \
   -boot d \
@@ -147,7 +149,18 @@ sudo qemu-system-x86_64 \
   -device usb-tablet \
   -k en-us \
   -vnc 127.0.0.1:0 \
-  -daemonize
+  > qemu_boot.log 2>&1 &
+
+# Aguarda para checar se o QEMU não caiu logo ao subir
+sleep 2
+if ! pgrep -f qemu-system-x86_64 > /dev/null; then
+    log_error "Erro: O QEMU falhou ao iniciar!"
+    if [ -f qemu_boot.log ]; then
+        log_error "Visualizando log de inicialização do QEMU (qemu_boot.log):"
+        cat qemu_boot.log
+    fi
+    exit 1
+fi
 
 # 8. Iniciar websockify para converter VNC (5900) para WebSockets (6080)
 log_info "Iniciando websockify na porta 6080..."

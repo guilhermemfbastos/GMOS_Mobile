@@ -4,11 +4,21 @@ from vncdotool import api
 
 def main():
     print("Conectando ao VNC em 127.0.0.1:5900...")
-    try:
-        client = api.connect('127.0.0.1:5900')
-    except Exception as e:
-        print(f"Erro ao conectar ao VNC: {e}")
-        sys.exit(1)
+    client = None
+    for attempt in range(1, 6):
+        try:
+            client = api.connect('127.0.0.1::5900')
+            # vncdotool connects lazily, force the connection by sending a harmless shift key
+            client.keyPress('shift')
+            print("Conectado com sucesso!")
+            break
+        except Exception as e:
+            print(f"Tentativa {attempt}/5 falhou ao conectar ao VNC: {e}")
+            if attempt < 5:
+                time.sleep(3)
+            else:
+                print("Erro: Não foi possível conectar ao VNC após 5 tentativas.")
+                sys.exit(1)
         
     print("Enviando comando para garantir foco na janela...")
     client.keyPress('super')  # abre/fecha o menu para dar foco

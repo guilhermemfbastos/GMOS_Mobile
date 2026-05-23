@@ -69,9 +69,9 @@ if [ -w /dev/kvm ]; then
 fi
 
 log_info "Limpando instâncias antigas..."
-sudo killall qemu-system-x86_64 websockify 2>/dev/null || true
+killall qemu-system-x86_64 websockify 2>/dev/null || true
 # Fecha qualquer servidor Python rodando na porta 8000
-sudo kill -9 $(lsof -t -i:8000) 2>/dev/null || true
+kill -9 $(lsof -t -i:8000) 2>/dev/null || true
 sleep 1
 
 # 5. Iniciar Servidor HTTP temporário para servir os arquivos de customização (wallpaper + script)
@@ -83,7 +83,7 @@ HTTP_SERVER_PID=$!
 log_info "Iniciando QEMU em background..."
 rm -f qemu_boot.log
 
-sudo qemu-system-x86_64 \
+qemu-system-x86_64 \
   -m 2048 \
   -smp 2 \
   $QEMU_ACCEL \
@@ -106,7 +106,7 @@ fi
 
 # 7. Iniciar noVNC bridge
 log_info "Iniciando websockify na porta 6080..."
-sudo websockify --web /usr/share/novnc 6080 127.0.0.1:5900 &
+websockify --web /usr/share/novnc 6080 127.0.0.1:5900 &
 sleep 2
 
 # 8. Iniciar automação de customização após o boot

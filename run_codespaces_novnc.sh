@@ -88,8 +88,6 @@ else
             fi
         fi
     fi
-
-    fi
 fi
 
 # Verificar se a ISO localizada/baixada é válida e se tem um tamanho mínimo aceitável (ex: 100MB)

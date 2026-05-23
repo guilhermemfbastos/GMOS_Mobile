@@ -71,6 +71,7 @@ sudo qemu-system-x86_64 \
   -boot d \
   -cdrom "$ISO_PATH" \
   -vga virtio \
+  -usb \
   -device usb-tablet \
   -k en-us \
   -vnc 127.0.0.1:0 \

@@ -24,7 +24,14 @@ jobs:
 
       - name: Gerar Gradle Wrapper e Conceder Permissões
         run: |
+          mkdir temp_gradle
+          cd temp_gradle
           gradle wrapper --gradle-version 7.4.2
+          cd ..
+          mv temp_gradle/gradlew .
+          mv temp_gradle/gradlew.bat .
+          mv temp_gradle/gradle .
+          rm -rf temp_gradle
           chmod +x gradlew
 
       - name: Compilar APK (Release)

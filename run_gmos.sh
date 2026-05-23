@@ -16,17 +16,24 @@ log_info "🖥️  INICIANDO GM OS (MINT XFCE EDITION) NO GITHUB CODESPACES"
 log_info "================================================================="
 
 # 1. Dependências
-log_info "Verificando dependências (qemu, novnc, websockify, wget)..."
+log_info "Verificando dependências (qemu, novnc, websockify, wget, pip)..."
 DEPS_TO_INSTALL=""
 if ! command -v qemu-system-x86_64 &> /dev/null; then DEPS_TO_INSTALL="qemu-system-x86"; fi
 if [ ! -d "/usr/share/novnc" ]; then DEPS_TO_INSTALL="$DEPS_TO_INSTALL novnc"; fi
 if ! command -v websockify &> /dev/null; then DEPS_TO_INSTALL="$DEPS_TO_INSTALL websockify"; fi
 if ! command -v wget &> /dev/null; then DEPS_TO_INSTALL="$DEPS_TO_INSTALL wget"; fi
+if ! command -v pip3 &> /dev/null; then DEPS_TO_INSTALL="$DEPS_TO_INSTALL python3-pip"; fi
 
 if [ -n "$DEPS_TO_INSTALL" ]; then
-    log_info "Instalando dependências ausentes: $DEPS_TO_INSTALL..."
+    log_info "Instalando dependências de sistema ausentes: $DEPS_TO_INSTALL..."
     sudo apt-get update || true
     sudo apt-get install -y $DEPS_TO_INSTALL
+fi
+
+# Instala vncdotool para automatizar cliques/teclado no VNC
+if ! python3 -c "import vncdotool" &>/dev/null; then
+    log_info "Instalando vncdotool para automação estritamente visual..."
+    pip3 install vncdotool || pip3 install vncdotool --break-system-packages || true
 fi
 
 # 2. Localizar ou baixar a ISO base
@@ -63,9 +70,16 @@ fi
 
 log_info "Limpando instâncias antigas..."
 sudo killall qemu-system-x86_64 websockify 2>/dev/null || true
+# Fecha qualquer servidor Python rodando na porta 8000
+sudo kill -9 $(lsof -t -i:8000) 2>/dev/null || true
 sleep 1
 
-# 5. Iniciar QEMU
+# 5. Iniciar Servidor HTTP temporário para servir os arquivos de customização (wallpaper + script)
+log_info "Iniciando servidor HTTP temporário na porta 8000..."
+python3 -m http.server 8000 &
+HTTP_SERVER_PID=$!
+
+# 6. Iniciar QEMU
 log_info "Iniciando QEMU em background..."
 rm -f qemu_boot.log
 
@@ -75,7 +89,7 @@ sudo qemu-system-x86_64 \
   $QEMU_ACCEL \
   -boot d \
   -cdrom "$ISO_PATH" \
-  -vga virtio \
+  -vga std \
   -usb \
   -device usb-tablet \
   -k en-us \
@@ -86,13 +100,25 @@ sleep 2
 if ! pgrep -f qemu-system-x86_64 > /dev/null; then
     log_error "Erro: O QEMU falhou ao iniciar!"
     cat qemu_boot.log
+    kill $HTTP_SERVER_PID 2>/dev/null || true
     exit 1
 fi
 
-# 6. Iniciar noVNC bridge
+# 7. Iniciar noVNC bridge
 log_info "Iniciando websockify na porta 6080..."
 sudo websockify --web /usr/share/novnc 6080 127.0.0.1:5900 &
 sleep 2
+
+# 8. Iniciar automação de customização após o boot
+(
+    log_info "Aguardando 35 segundos para o boot carregar antes de aplicar as modificações visuais..."
+    sleep 35
+    log_info "Aplicando personalizações visuais automaticamente (Wallpaper, Dock flutuante, tema claro)..."
+    python3 gmos-builder/automate.py || log_warn "A automação de customização falhou. Você pode rodar manualmente abrindo o terminal no noVNC e digitando: curl -s http://10.0.2.2:8000/gmos-builder/customize.sh | bash"
+    
+    # Encerra o servidor HTTP temporário após concluir a customização
+    kill $HTTP_SERVER_PID 2>/dev/null || true
+) &
 
 log_info "================================================================="
 log_info "🎉 GM OS (LINUX MINT XFCE) PRONTO PARA TESTE!"
@@ -103,4 +129,6 @@ echo -e "2. Clique no ícone de globo na porta ${CYAN}6080${NC}."
 if [ -n "$CODESPACE_NAME" ]; then
     echo -e "   Ou use: https://${CODESPACE_NAME}-6080.app.github.dev/"
 fi
+log_info "================================================================="
+log_info "Nota: Em 35 segundos, as modificações de estilo (wallpaper, barra de tarefas arredondada flutuante e tema claro) serão aplicadas automaticamente!"
 log_info "================================================================="

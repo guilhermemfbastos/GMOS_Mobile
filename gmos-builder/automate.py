@@ -18,12 +18,12 @@ SHIFT_MAP = {
     '+': 'shift-=',
     '{': 'shift-[',
     '}': 'shift-]',
-    '|': 'shift-\\',
+    '|': 'shift-bslash',
     ':': 'shift-;',
     '"': "shift-'",
     '<': 'shift-,',
     '>': 'shift-.',
-    '?': 'shift-/',
+    '?': 'shift-fslash',
     '~': 'shift-`',
 }
 
@@ -77,15 +77,16 @@ def main():
     
     print("Executando o script de customização...")
     # Executa o script baixado via HTTP local
-    vnc_type(client, "curl -s http://10.0.2.2:8000/gmos-builder/customize.sh | bash")
-    client.keyPress('enter')
-    time.sleep(5)
-    
-    print("Fechando o terminal...")
-    vnc_type(client, "exit")
+    vnc_type(client, "curl -s http:")
+    vnc_type(client, "//10.0.2.2:")
+    vnc_type(client, "8000/gmos-builder/customize.sh ")
+    vnc_type(client, "| bash")
     client.keyPress('enter')
     
-    print("Customização concluída!")
+    print("Aguardando o script finalizar (15s)...")
+    time.sleep(15)
+    
+    print("Customização concluída! O terminal ficará aberto para debug.")
 
 if __name__ == '__main__':
     main()

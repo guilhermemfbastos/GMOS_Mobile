@@ -31,7 +31,7 @@ docker run --rm --privileged -v "${WORKSPACE_DIR}:/workspace" alpine:latest /bin
     adduser -D -g "Builder" builder
     addgroup builder abuild
     echo "builder ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/builder
-    echo 'Defaults env_keep += "MKSQUASHFS_OPTS"' >> /etc/sudoers.d/builder
+    echo "Defaults env_keep += \"MKSQUASHFS_OPTS\"" >> /etc/sudoers.d/builder
     chmod 0440 /etc/sudoers.d/builder
     
     # Configurar doas (preferido pelo Alpine)
@@ -70,7 +70,7 @@ docker run --rm --privileged -v "${WORKSPACE_DIR}:/workspace" alpine:latest /bin
             http*) REPOS="$REPOS --repository $r" ;;
         esac
     done
-    su builder -c "export MKSQUASHFS_OPTS='-noI -noD -noF -no-fragments'; sh mkimage.sh --tag 1.0 --outdir /workspace/output --profile gmos $REPOS"
+    su builder -c "export MKSQUASHFS_OPTS=\"-noI -noD -noF -no-fragments\"; sh mkimage.sh --tag 1.0 --outdir /workspace/output --profile gmos $REPOS"
     
     echo "[DOCKER] Compilação concluída!"
 '

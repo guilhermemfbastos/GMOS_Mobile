@@ -27,7 +27,7 @@ jobs:
           mkdir temp_gradle
           cd temp_gradle
           touch settings.gradle
-          gradle wrapper --gradle-version 7.4.2
+          gradle wrapper --gradle-version 7.5
           cd ..
           mv temp_gradle/gradlew .
           mv temp_gradle/gradlew.bat .

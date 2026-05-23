@@ -302,7 +302,7 @@ TEMP_SFS_DIR="${BUILD_DIR}/sfs_temp"
 mkdir -p "${TEMP_SFS_DIR}"
 mv "${SYSTEM_IMG}" "${TEMP_SFS_DIR}/system.img"
 rm -f "${ISO_EXTRACT}/system.sfs"
-mksquashfs "${TEMP_SFS_DIR}" "${ISO_EXTRACT}/system.sfs" -comp xz -b 1024K
+mksquashfs "${TEMP_SFS_DIR}" "${ISO_EXTRACT}/system.sfs" -comp gzip
 
 # ============================================================
 # 10. GERAR ISO FINAL

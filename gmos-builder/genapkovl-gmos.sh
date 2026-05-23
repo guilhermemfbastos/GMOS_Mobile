@@ -70,6 +70,8 @@ makefile root:root 0755 "$tmp"/etc/local.d/gmos-setup.start <<EOF
 if ! id gmos >/dev/null 2>&1; then
     adduser -D -g "GM OS User" -s /bin/bash gmos
     echo "gmos:gmos" | chpasswd
+    addgroup -S autologin 2>/dev/null || true
+    addgroup gmos autologin
     addgroup gmos wheel
     addgroup gmos video
     addgroup gmos audio

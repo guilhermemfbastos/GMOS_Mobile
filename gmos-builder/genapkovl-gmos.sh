@@ -84,7 +84,8 @@ EOF
 # Serviços a iniciar
 rc_add devfs sysinit
 rc_add dmesg sysinit
-rc_add mdev sysinit
+rc_add udev sysinit
+rc_add udev-trigger sysinit
 rc_add hwdrivers sysinit
 rc_add modloop sysinit
 
@@ -101,7 +102,6 @@ rc_add savecache shutdown
 
 rc_add networking default
 rc_add local default
-rc_add udev default
 rc_add dbus default
 rc_add lightdm default
 

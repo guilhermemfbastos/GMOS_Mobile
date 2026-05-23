@@ -3,6 +3,9 @@ name: GM OS Mobile ISO Build
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   remaster-iso:
     name: Remasterizar ISO Android-x86

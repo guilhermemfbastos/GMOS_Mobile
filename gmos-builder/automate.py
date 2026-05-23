@@ -5,7 +5,7 @@ from vncdotool import api
 def main():
     print("Conectando ao VNC em 127.0.0.1:5900...")
     try:
-        client = api.connect('127.0.0.1:5900', shared=True)
+        client = api.connect('127.0.0.1:5900')
     except Exception as e:
         print(f"Erro ao conectar ao VNC: {e}")
         sys.exit(1)

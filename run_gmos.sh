@@ -93,7 +93,7 @@ sudo qemu-system-x86_64 \
   -usb \
   -device usb-tablet \
   -k en-us \
-  -vnc 127.0.0.1:0,share=force-shared \
+  -vnc 127.0.0.1:0 \
   > qemu_boot.log 2>&1 &
 
 sleep 2

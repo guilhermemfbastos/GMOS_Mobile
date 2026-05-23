@@ -11,13 +11,13 @@ def main():
         sys.exit(1)
         
     print("Enviando comando para garantir foco na janela...")
-    client.key('super')  # abre/fecha o menu para dar foco
+    client.keyPress('super')  # abre/fecha o menu para dar foco
     time.sleep(1)
-    client.key('super')
+    client.keyPress('super')
     time.sleep(1)
     
     print("Enviando Ctrl+Alt+T para abrir o terminal...")
-    client.key('ctrl-alt-t')
+    client.keyPress('ctrl-alt-t')
     time.sleep(3)
     
     print("Executando o script de customização...")

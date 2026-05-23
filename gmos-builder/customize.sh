@@ -145,11 +145,7 @@ PLYSC
     # Atualiza o initramfs (REMOVIDO: no Live CD isso causa kernel panic / reboot por falta de espaço no overlay)
     # sudo update-initramfs -u 2>/dev/null || true
     
-    # Testar o plymouth na tela atual (opcional, só para ver como ficou)
-    sudo plymouthd --mode=boot --tty=tty1 2>/dev/null || true
-    sudo plymouth show-splash 2>/dev/null || true
-    sleep 3
-    sudo plymouth quit 2>/dev/null || true
+    # (Teste do Plymouth removido pois conflita com o servidor X11 ativo e derruba a conexão VNC)
 
     echo "[GMOS] Tela de boot configurada com sucesso!"
 fi

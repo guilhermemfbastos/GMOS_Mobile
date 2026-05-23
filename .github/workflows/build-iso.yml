@@ -1,8 +1,6 @@
 name: GM OS Mobile ISO Build
 
 on:
-  push:
-    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
@@ -29,3 +27,16 @@ jobs:
           name: GM-OS-Mobile-ISO
           path: output/GM-OS-Mobile.iso
           retention-days: 7
+
+      - name: Criar/Atualizar Release Pública
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Deleta a release anterior com a tag "latest" (e sua tag remota) se existirem
+          gh release delete latest --yes --cleanup-tag || true
+          
+          # Cria a nova release pública e faz o upload da ISO
+          gh release create latest output/GM-OS-Mobile.iso \
+            --title "GM OS Mobile - Última Versão" \
+            --notes "Esta release contém a ISO mais recente remasterizada do GM OS Mobile." \
+            --target main

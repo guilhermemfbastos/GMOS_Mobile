@@ -1,0 +1,4 @@
+# TRAVA DE SEGURANÇA: NÃO APAGUE ESTE ARQUIVO
+# Este arquivo impede a recompilação da ISO do GM OS Mobile para evitar processos de build demorados.
+# Se você realmente deseja reconstruir a ISO, exclua ou renomeie este arquivo.
+locked=true

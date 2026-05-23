@@ -61,7 +61,7 @@ jobs:
           sleep 3
 
       - name: Expor via noVNC (Link Público)
-          # Mantém a sessão ativa por até 1 hora (3600s)
+        # Mantém a sessão ativa por até 1 hora (3600s)
         run: |
           echo "================================================================="
           echo "🖥️  INICIANDO CONEXÃO DO GM OS MOBILE VIA noVNC"
@@ -71,4 +71,9 @@ jobs:
           echo "Sua máquina virtual ficará ativa por 1 hora ou até você cancelar."
           echo "================================================================="
           
-          timeout 3600 ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -R 80:localhost:6080 qr@pinggy.io || true
+          # 1. Gera chave SSH temporária necessária para o túnel do pinggy funcionar
+          mkdir -p ~/.ssh
+          ssh-keygen -t rsa -b 2048 -f ~/.ssh/id_rsa -N ""
+          
+          # 2. Conecta ao túnel SSH do pinggy na porta 443 sem pseudo-terminal interativo
+          timeout 3600 ssh -T -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ServerAliveInterval=30 -p 443 -R 0:localhost:6080 free.pinggy.io || true

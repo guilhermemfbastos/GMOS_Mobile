@@ -33,6 +33,11 @@ docker run --rm --privileged -v "${WORKSPACE_DIR}:/workspace" alpine:latest /bin
     echo "builder ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/builder
     chmod 0440 /etc/sudoers.d/builder
     
+    # Configurar doas (preferido pelo Alpine)
+    mkdir -p /etc/doas.d
+    echo "permit nopass :abuild" > /etc/doas.d/builder.conf
+    echo "permit nopass builder" >> /etc/doas.d/builder.conf
+    
     # Configurando chaves de assinatura do apk
     mkdir -p /var/cache/distfiles
     chgrp abuild /var/cache/distfiles

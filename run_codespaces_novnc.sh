@@ -143,6 +143,7 @@ sudo qemu-system-x86_64 \
   -cdrom "$ISO_PATH" \
   -hda android_disk.qcow2 \
   -vga std \
+  -device usb-tablet \
   -vnc 127.0.0.1:0 \
   -daemonize
 

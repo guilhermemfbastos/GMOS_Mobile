@@ -1,0 +1,74 @@
+name: Run GM OS in noVNC
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-vnc:
+    name: Iniciar Android-x86 no noVNC
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do Repositório
+        uses: actions/checkout@v4
+
+      - name: Instalar Dependências do Sistema
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-system-x86 novnc websockify jq
+
+      - name: Baixar ISO do último build de sucesso
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p output
+          # Obtém o ID da última execução com sucesso da pipeline de build da ISO
+          RUN_ID=$(gh run list --workflow "GM OS Mobile ISO Build" --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+          if [ -z "$RUN_ID" ]; then
+            echo "Erro: Nenhuma ISO compilada com sucesso foi encontrada!"
+            exit 1
+          fi
+          echo "Baixando artefato da execução com ID: $RUN_ID"
+          gh run download $RUN_ID -n "GM-OS-Mobile-ISO" --dir output
+
+      - name: Configurar noVNC
+        run: |
+          # Cria um link simbólico para carregar a página do noVNC diretamente no link raiz
+          sudo ln -sf /usr/share/novnc/vnc.html /usr/share/novnc/index.html
+
+      - name: Iniciar Emulador QEMU (Headless com VNC)
+        run: |
+          # Cria um disco virtual temporário de 4GB para o Android usar se necessário
+          qemu-img create -f qcow2 android_disk.qcow2 4G
+          
+          # Inicia o QEMU com KVM acelerado
+          # -daemonize roda o QEMU em background liberando o terminal
+          sudo qemu-system-x86_64 \
+            -m 2048 \
+            -smp 2 \
+            -cpu host \
+            -enable-kvm \
+            -boot d \
+            -cdrom output/GM-OS-Mobile.iso \
+            -hda android_disk.qcow2 \
+            -vga std \
+            -vnc :0 \
+            -daemonize
+
+      - name: Iniciar websockify
+        run: |
+          # Converte tráfego VNC (porta 5900) para WebSockets (porta 6080)
+          sudo websockify --web /usr/share/novnc 6080 localhost:5900 &
+          sleep 3
+
+      - name: Expor via noVNC (Link Público)
+          # Mantém a sessão ativa por até 1 hora (3600s)
+        run: |
+          echo "================================================================="
+          echo "🖥️  INICIANDO CONEXÃO DO GM OS MOBILE VIA noVNC"
+          echo "Aguarde o link público do pinggy.io aparecer abaixo."
+          echo "Ele começará com http://... ou https://..."
+          echo "Abra o link no navegador e clique em 'Connect' para mexer no Android!"
+          echo "Sua máquina virtual ficará ativa por 1 hora ou até você cancelar."
+          echo "================================================================="
+          
+          timeout 3600 ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -R 80:localhost:6080 qr@pinggy.io || true

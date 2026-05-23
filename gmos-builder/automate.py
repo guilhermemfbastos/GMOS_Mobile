@@ -32,11 +32,13 @@ def main():
     
     print("Executando o script de customização...")
     # Executa o script baixado via HTTP local
-    client.type("curl -s http://10.0.2.2:8000/gmos-builder/customize.sh | bash\n")
+    client.typeString("curl -s http://10.0.2.2:8000/gmos-builder/customize.sh | bash")
+    client.keyPress('enter')
     time.sleep(5)
     
     print("Fechando o terminal...")
-    client.type("exit\n")
+    client.typeString("exit")
+    client.keyPress('enter')
     
     print("Customização concluída!")
 

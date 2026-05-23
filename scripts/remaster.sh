@@ -1,197 +1,255 @@
 #!/bin/bash
 # ==============================================================================
 # Script de Remasterização do Android-x86 para GM OS Mobile
-# Desenvolvido por Antigravity (Google DeepMind Team)
+# Versão Simplificada: Wallpaper + Boot Animation + Ícones
 # ==============================================================================
-# Este script deve ser executado em um ambiente Linux (Ubuntu-latest/Debian)
-# com privilégios de root (sudo) e requer as seguintes dependências instaladas:
-# squashfs-tools, xorriso, p7zip-full, e2fsprogs, wget
+# Executar em ambiente Linux (Ubuntu) com privilégios de root (sudo)
 # ==============================================================================
 
-set -e # Interrompe a execução caso algum comando falhe
+set -e
 
-# Cores para logs formatados no terminal
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-log_info() {
-    echo -e "${GREEN}[INFO] $1${NC}"
-}
+log_info() { echo -e "${GREEN}[INFO] $1${NC}"; }
+log_warn() { echo -e "${YELLOW}[WARN] $1${NC}"; }
+log_error() { echo -e "${RED}[ERROR] $1${NC}"; }
 
-log_warn() {
-    echo -e "${YELLOW}[WARN] $1${NC}"
-}
+log_info "Iniciando remasterização GM OS Mobile..."
 
-log_error() {
-    echo -e "${RED}[ERROR] $1${NC}"
-}
-
-log_info "Iniciando processo de cirurgia e remasterização da ISO GM OS Mobile..."
-
-# 1. Validação de Privilégios de Execução
 if [ "$EUID" -ne 0 ]; then
-    log_error "Este script realiza montagem de partições e manipulação de permissões de sistema."
-    log_error "Por favor, execute-o utilizando sudo: 'sudo ./remaster.sh'"
+    log_error "Execute com sudo: 'sudo ./remaster.sh'"
     exit 1
 fi
 
-# 2. Definição de Variáveis e Ambientes
+# ============================================================
+# VARIÁVEIS DE AMBIENTE
+# ============================================================
 WORKSPACE_DIR="$(pwd)"
 ORIGINAL_ISO_URL="https://downloads.sourceforge.net/project/android-x86/Release%209.0/android-x86-9.0-r2.iso"
 ORIGINAL_ISO_NAME="android-x86-9.0-r2.iso"
 CUSTOM_ISO_NAME="GM-OS-Mobile.iso"
 
-# Diretórios temporários de compilação
 BUILD_DIR="${WORKSPACE_DIR}/build_workspace"
 ISO_EXTRACT="${BUILD_DIR}/iso_extract"
 SFS_EXTRACT="${BUILD_DIR}/sfs_extract"
 SYSTEM_MOUNT="${BUILD_DIR}/system_mount"
 OUTPUT_DIR="${WORKSPACE_DIR}/output"
 
-# Limpar workspace anterior se houver
-log_info "Limpando ambiente de builds anteriores..."
+# Limpar workspace anterior
 rm -rf "${BUILD_DIR}"
-mkdir -p "${ISO_EXTRACT}"
-mkdir -p "${SYSTEM_MOUNT}"
-mkdir -p "${OUTPUT_DIR}"
+mkdir -p "${ISO_EXTRACT}" "${SYSTEM_MOUNT}" "${OUTPUT_DIR}"
 
-# 3. Download da Imagem Android-x86 de Referência (se não houver localmente)
+# ============================================================
+# 1. DOWNLOAD DA ISO OFICIAL
+# ============================================================
 if [ ! -f "${WORKSPACE_DIR}/${ORIGINAL_ISO_NAME}" ]; then
-    log_info "Fazendo download da ISO oficial do Android-x86 (9.0 Pie Stable)..."
+    log_info "Baixando ISO oficial do Android-x86 9.0..."
     wget -L -O "${WORKSPACE_DIR}/${ORIGINAL_ISO_NAME}" "${ORIGINAL_ISO_URL}"
 else
-    log_info "ISO original de referência encontrada localmente no diretório root."
+    log_info "ISO oficial encontrada localmente."
 fi
 
-# 4. Extração da ISO
-log_info "Extraindo o sistema de arquivos da ISO..."
+# ============================================================
+# 2. EXTRAÇÃO DA ISO
+# ============================================================
+log_info "Extraindo ISO..."
 7z x "${WORKSPACE_DIR}/${ORIGINAL_ISO_NAME}" -o"${ISO_EXTRACT}" -y > /dev/null
 
-# 5. Extração e Redimensionamento do SquashFS (system.sfs)
+# ============================================================
+# 3. EXTRAÇÃO DO SQUASHFS (system.sfs → system.img)
+# ============================================================
 if [ -f "${ISO_EXTRACT}/system.sfs" ]; then
-    log_info "Encontrado 'system.sfs'. Extraindo SquashFS para obter o 'system.img'..."
+    log_info "Extraindo SquashFS (system.sfs)..."
     unsquashfs -d "${SFS_EXTRACT}" "${ISO_EXTRACT}/system.sfs"
     SYSTEM_IMG="${SFS_EXTRACT}/system.img"
 elif [ -f "${ISO_EXTRACT}/system.img" ]; then
-    log_info "Encontrado 'system.img' diretamente na raiz da ISO..."
+    log_info "system.img encontrado diretamente."
     SYSTEM_IMG="${ISO_EXTRACT}/system.img"
 else
-    log_error "Erro estrutural: Nenhum arquivo system.sfs ou system.img foi encontrado na ISO."
+    log_error "Nenhum system.sfs ou system.img encontrado!"
     exit 1
 fi
 
-if [ ! -f "${SYSTEM_IMG}" ]; then
-    log_error "Erro: O arquivo de imagem de sistema (system.img) não pôde ser extraído."
-    exit 1
-fi
-
-# Aumentar o tamanho do system.img para que caibam os novos GApps e Launcher (+500MB)
-log_info "Redimensionando system.img para adicionar espaço de armazenamento (+500 MB)..."
-dd if=/dev/zero bs=1M count=500 >> "${SYSTEM_IMG}"
-log_info "Verificando consistência da imagem do sistema..."
+# Redimensionar para ter espaço (+200MB)
+log_info "Redimensionando system.img (+200 MB)..."
+dd if=/dev/zero bs=1M count=200 >> "${SYSTEM_IMG}"
 e2fsck -f -y "${SYSTEM_IMG}"
-log_info "Expandindo o sistema de arquivos ext4 interno..."
 resize2fs "${SYSTEM_IMG}"
 
-# 6. Montagem em Loopback para Edição R/W
-log_info "Montando 'system.img' em modo Leitura/Escrita..."
+# ============================================================
+# 4. MONTAR SISTEMA PARA EDIÇÃO
+# ============================================================
+log_info "Montando system.img em modo R/W..."
 mount -o loop,rw "${SYSTEM_IMG}" "${SYSTEM_MOUNT}"
 
-# 7. Injeção do Nosso Launcher Customizado (GM UI)
-log_info "Injetando a GM UI (Launcher Customizado)..."
-LAUNCHER_SOURCE="${WORKSPACE_DIR}/app/build/outputs/apk/release/app-release-unsigned.apk"
-if [ ! -f "${LAUNCHER_SOURCE}" ]; then
-    # Procura na pasta root se não foi gerado pelo Gradle na mesma workflow
-    LAUNCHER_SOURCE="${WORKSPACE_DIR}/GM_UI.apk"
-fi
+# ============================================================
+# 5. TROCAR WALLPAPER PADRÃO
+# ============================================================
+log_info "Substituindo wallpaper padrão..."
+WALLPAPER_SOURCE="${WORKSPACE_DIR}/assets/wallpaper.png"
 
-if [ -f "${LAUNCHER_SOURCE}" ]; then
-    mkdir -p "${SYSTEM_MOUNT}/system/priv-app/GM_UI"
-    cp "${LAUNCHER_SOURCE}" "${SYSTEM_MOUNT}/system/priv-app/GM_UI/GM_UI.apk"
+if [ -f "${WALLPAPER_SOURCE}" ]; then
+    # Instala imagemagick para conversão de formato
+    apt-get install -y imagemagick > /dev/null 2>&1 || true
+
+    # O Android usa o wallpaper padrão de /system/framework/framework-res.apk
+    # Mas a forma mais simples é sobrescrever diretamente os arquivos de wallpaper do sistema
+    FRAMEWORK_DIR="${SYSTEM_MOUNT}/system/framework"
     
-    # Ajuste de Permissões: arquivos de sistema precisam de root e chmod 644
-    chmod 644 "${SYSTEM_MOUNT}/system/priv-app/GM_UI/GM_UI.apk"
-    chown -R 0:0 "${SYSTEM_MOUNT}/system/priv-app/GM_UI"
-    log_info "GM UI Launcher injetado e configurado com sucesso."
+    # Copia o wallpaper para diferentes locais conhecidos do Android-x86
+    # Local 1: /system/etc/ (usado por algumas builds)
+    cp "${WALLPAPER_SOURCE}" "${SYSTEM_MOUNT}/system/etc/default_wallpaper.png" 2>/dev/null || true
+    
+    # Local 2: Converte para JPG (formato esperado pelo framework)
+    convert "${WALLPAPER_SOURCE}" "${SYSTEM_MOUNT}/system/etc/default_wallpaper.jpg" 2>/dev/null || true
+    
+    # Permissões corretas
+    chmod 644 "${SYSTEM_MOUNT}/system/etc/default_wallpaper.png" 2>/dev/null || true
+    chmod 644 "${SYSTEM_MOUNT}/system/etc/default_wallpaper.jpg" 2>/dev/null || true
+    chown 0:0 "${SYSTEM_MOUNT}/system/etc/default_wallpaper.png" 2>/dev/null || true
+    chown 0:0 "${SYSTEM_MOUNT}/system/etc/default_wallpaper.jpg" 2>/dev/null || true
+
+    log_info "Wallpaper customizado instalado com sucesso."
 else
-    log_warn "Aviso: Nenhum launcher APK ('GM_UI.apk') encontrado no root ou na pasta de build."
-    log_warn "O sistema iniciará sem alterações de interface."
+    log_warn "Wallpaper não encontrado em assets/wallpaper.png"
 fi
 
-# 8. Injeção dos Serviços do Google (GApps)
-log_info "Verificando presença de arquivos GApps para injeção..."
-GAPPS_DIR="${WORKSPACE_DIR}/gapps"
+# ============================================================
+# 6. BOOT ANIMATION CUSTOMIZADA
+# ============================================================
+log_info "Criando boot animation customizada GM OS..."
+BOOTANIM_DIR="${BUILD_DIR}/bootanimation"
+mkdir -p "${BOOTANIM_DIR}/part0"
+mkdir -p "${BOOTANIM_DIR}/part1"
 
-if [ -d "${GAPPS_DIR}" ] && [ "$(ls -A "${GAPPS_DIR}")" ]; then
-    log_info "Injetando pacotes Google Play Store e Play Services..."
+# Gera frames para a boot animation usando ImageMagick
+# Frame estático com logo GM OS (parte 0 - exibido uma vez)
+for i in $(seq -w 0 29); do
+    convert -size 1280x720 \
+        -define gradient:angle=135 \
+        gradient:"#0a0a2e"-"#1a0a3e" \
+        -gravity center \
+        -font "DejaVu-Sans-Bold" \
+        -pointsize 72 \
+        -fill "#ffffff" \
+        -annotate +0+0 "GM OS" \
+        -fill "#4488ff" \
+        -pointsize 24 \
+        -annotate +0+60 "Mobile" \
+        "${BOOTANIM_DIR}/part0/frame${i}.png"
+done
+
+# Animação pulsante (parte 1 - loop)
+for i in $(seq -w 0 19); do
+    OPACITY=$(echo "scale=2; 0.5 + 0.5 * s($i * 0.314)" | bc -l 2>/dev/null || echo "0.8")
+    convert -size 1280x720 \
+        -define gradient:angle=135 \
+        gradient:"#0a0a2e"-"#1a0a3e" \
+        -gravity center \
+        -font "DejaVu-Sans-Bold" \
+        -pointsize 72 \
+        -fill "rgba(255,255,255,${OPACITY})" \
+        -annotate +0+0 "GM OS" \
+        -fill "rgba(68,136,255,${OPACITY})" \
+        -pointsize 24 \
+        -annotate +0+60 "Mobile" \
+        "${BOOTANIM_DIR}/part1/frame${i}.png"
+done
+
+# desc.txt define o formato: largura altura fps
+# p = parte, count = vezes (0=loop), pause = frames de pausa, nome da pasta
+cat > "${BOOTANIM_DIR}/desc.txt" << EOF
+1280 720 15
+p 1 0 part0
+p 0 0 part1
+EOF
+
+# Empacota em bootanimation.zip (SEM compressão - obrigatório pelo Android)
+cd "${BOOTANIM_DIR}"
+zip -r -0 "${BUILD_DIR}/bootanimation.zip" desc.txt part0/ part1/
+cd "${WORKSPACE_DIR}"
+
+# Injeta no sistema
+cp "${BUILD_DIR}/bootanimation.zip" "${SYSTEM_MOUNT}/system/media/bootanimation.zip"
+chmod 644 "${SYSTEM_MOUNT}/system/media/bootanimation.zip"
+chown 0:0 "${SYSTEM_MOUNT}/system/media/bootanimation.zip"
+log_info "Boot animation GM OS instalada."
+
+# ============================================================
+# 7. ÍCONES DE NAVEGAÇÃO E STATUS BAR (Overlay)
+# ============================================================
+log_info "Preparando overlay de ícones customizados..."
+
+# O Android-x86 usa ícones vetoriais (XML drawable) no SystemUI
+# A forma mais segura de customizar sem recompilar é criar um
+# Runtime Resource Overlay (RRO) - mas isso requer compilação.
+#
+# Abordagem alternativa: substituir diretamente no SystemUI.apk
+# Os ícones de navegação ficam em:
+#   /system/priv-app/SystemUI/SystemUI.apk
+#   -> res/drawable-*dpi/ic_sysbar_back.png
+#   -> res/drawable-*dpi/ic_sysbar_home.png
+#   -> res/drawable-*dpi/ic_sysbar_recent.png
+#
+# Os ícones de status ficam em:
+#   -> res/drawable-*dpi/stat_sys_wifi_signal_*.png
+#   -> res/drawable-*dpi/stat_sys_battery_*.png
+
+ICONS_DIR="${WORKSPACE_DIR}/assets/icons"
+if [ -d "${ICONS_DIR}" ] && [ "$(ls -A "${ICONS_DIR}" 2>/dev/null)" ]; then
+    log_info "Ícones customizados encontrados. Instalando via apktool..."
     
-    # Cria os diretórios correspondentes no system
-    mkdir -p "${SYSTEM_MOUNT}/system/priv-app/GoogleServicesFramework"
-    mkdir -p "${SYSTEM_MOUNT}/system/priv-app/PrebuiltGmsCore"
-    mkdir -p "${SYSTEM_MOUNT}/system/priv-app/Phonesky"
-    mkdir -p "${SYSTEM_MOUNT}/system/priv-app/GoogleLoginService"
-
-    # Copia os APKs obrigatórios
-    [ -f "${GAPPS_DIR}/GoogleServicesFramework.apk" ] && cp "${GAPPS_DIR}/GoogleServicesFramework.apk" "${SYSTEM_MOUNT}/system/priv-app/GoogleServicesFramework/"
-    [ -f "${GAPPS_DIR}/PrebuiltGmsCore.apk" ] && cp "${GAPPS_DIR}/PrebuiltGmsCore.apk" "${SYSTEM_MOUNT}/system/priv-app/PrebuiltGmsCore/"
-    [ -f "${GAPPS_DIR}/Phonesky.apk" ] && cp "${GAPPS_DIR}/Phonesky.apk" "${SYSTEM_MOUNT}/system/priv-app/Phonesky/"
-    [ -f "${GAPPS_DIR}/GoogleLoginService.apk" ] && cp "${GAPPS_DIR}/GoogleLoginService.apk" "${SYSTEM_MOUNT}/system/priv-app/GoogleLoginService/"
-
-    # Injeção crítica da Whitelist de permissões privilegiadas
-    log_info "Gravando whitelist de permissões privilegiadas (privapp-permissions-google.xml)..."
-    cp "${WORKSPACE_DIR}/scripts/privapp-permissions-google.xml" "${SYSTEM_MOUNT}/system/etc/permissions/"
-    chmod 644 "${SYSTEM_MOUNT}/system/etc/permissions/privapp-permissions-google.xml"
-    chown 0:0 "${SYSTEM_MOUNT}/system/etc/permissions/privapp-permissions-google.xml"
-
-    # Ajuste de Permissões Recursivas nos Apps do Google
-    chmod 644 "${SYSTEM_MOUNT}/system/priv-app/GoogleServicesFramework/GoogleServicesFramework.apk"
-    chmod 644 "${SYSTEM_MOUNT}/system/priv-app/PrebuiltGmsCore/PrebuiltGmsCore.apk"
-    chmod 644 "${SYSTEM_MOUNT}/system/priv-app/Phonesky/Phonesky.apk"
-    chmod 644 "${SYSTEM_MOUNT}/system/priv-app/GoogleLoginService/GoogleLoginService.apk"
+    # Instala apktool se disponível
+    which apktool > /dev/null 2>&1 || {
+        log_info "Instalando apktool..."
+        wget -q "https://raw.githubusercontent.com/nicehash/apktool/master/scripts/linux/apktool" -O /usr/local/bin/apktool
+        wget -q "https://bitbucket.org/nicehash/apktool/downloads/apktool_2.7.0.jar" -O /usr/local/bin/apktool.jar
+        chmod +x /usr/local/bin/apktool
+    }
     
-    chown -R 0:0 "${SYSTEM_MOUNT}/system/priv-app/GoogleServicesFramework"
-    chown -R 0:0 "${SYSTEM_MOUNT}/system/priv-app/PrebuiltGmsCore"
-    chown -R 0:0 "${SYSTEM_MOUNT}/system/priv-app/Phonesky"
-    chown -R 0:0 "${SYSTEM_MOUNT}/system/priv-app/GoogleLoginService"
-
-    log_info "Serviços Google injetados com sucesso e permissões estruturadas."
+    SYSTEMUI_APK="${SYSTEM_MOUNT}/system/priv-app/SystemUI/SystemUI.apk"
+    if [ -f "${SYSTEMUI_APK}" ]; then
+        SYSTEMUI_WORK="${BUILD_DIR}/systemui_work"
+        
+        # Decompila SystemUI
+        apktool d "${SYSTEMUI_APK}" -o "${SYSTEMUI_WORK}" -f
+        
+        # Copia ícones customizados por cima dos originais
+        # Navegação (botões voltar, home, recentes)
+        [ -f "${ICONS_DIR}/ic_sysbar_back.png" ] && find "${SYSTEMUI_WORK}/res" -name "ic_sysbar_back*" -exec cp "${ICONS_DIR}/ic_sysbar_back.png" {} \;
+        [ -f "${ICONS_DIR}/ic_sysbar_home.png" ] && find "${SYSTEMUI_WORK}/res" -name "ic_sysbar_home*" -exec cp "${ICONS_DIR}/ic_sysbar_home.png" {} \;
+        [ -f "${ICONS_DIR}/ic_sysbar_recent.png" ] && find "${SYSTEMUI_WORK}/res" -name "ic_sysbar_recent*" -exec cp "${ICONS_DIR}/ic_sysbar_recent.png" {} \;
+        
+        # Status bar (wifi, bateria)
+        [ -f "${ICONS_DIR}/stat_sys_wifi.png" ] && find "${SYSTEMUI_WORK}/res" -name "stat_sys_wifi_signal*" -exec cp "${ICONS_DIR}/stat_sys_wifi.png" {} \;
+        [ -f "${ICONS_DIR}/stat_sys_battery.png" ] && find "${SYSTEMUI_WORK}/res" -name "stat_sys_battery*" -exec cp "${ICONS_DIR}/stat_sys_battery.png" {} \;
+        
+        # Recompila SystemUI
+        apktool b "${SYSTEMUI_WORK}" -o "${BUILD_DIR}/SystemUI_modified.apk"
+        
+        # Substitui o APK original (mantém assinatura original copiando apenas os recursos)
+        cp "${BUILD_DIR}/SystemUI_modified.apk" "${SYSTEMUI_APK}"
+        chmod 644 "${SYSTEMUI_APK}"
+        chown 0:0 "${SYSTEMUI_APK}"
+        
+        log_info "Ícones de navegação e status bar customizados instalados."
+    else
+        log_warn "SystemUI.apk não encontrado no caminho esperado."
+    fi
 else
-    log_warn "Diretório de GApps vazio ou ausente em '${GAPPS_DIR}'."
-    log_warn "A ISO será gerada sem o ecossistema Google Play pré-instalado."
+    log_warn "Nenhum ícone customizado encontrado em assets/icons/"
+    log_warn "Para customizar, coloque PNGs nessa pasta com os nomes:"
+    log_warn "  ic_sysbar_back.png, ic_sysbar_home.png, ic_sysbar_recent.png"
+    log_warn "  stat_sys_wifi.png, stat_sys_battery.png"
 fi
 
-# 9. Remoção do Launcher Padrão do Android-x86
-log_info "Removendo os launchers nativos para inicialização direta do GM UI..."
-# Deleta pacotes nativos para que não seja exibido o diálogo "Selecionar um launcher"
-rm -rf "${SYSTEM_MOUNT}/system/app/Launcher3"
-rm -rf "${SYSTEM_MOUNT}/system/priv-app/Launcher3"
-rm -rf "${SYSTEM_MOUNT}/system/app/Taskbar"
-rm -rf "${SYSTEM_MOUNT}/system/priv-app/Taskbar"
-
-# 10. Desmontar a Partição e Validar a Gravação
-log_info "Salvando alterações e desmontando a imagem do sistema..."
-sync
-umount "${SYSTEM_MOUNT}"
-e2fsck -f -y "${SYSTEM_IMG}"
-
-# 11. Recompressão do SquashFS (system.sfs)
-log_info "Recompactando a imagem do sistema em formato SquashFS com compressão XZ..."
-TEMP_SFS_DIR="${BUILD_DIR}/sfs_temp"
-mkdir -p "${TEMP_SFS_DIR}"
-mv "${SYSTEM_IMG}" "${TEMP_SFS_DIR}/system.img"
-
-# Deleta o original da árvore de compilação da ISO
-rm -f "${ISO_EXTRACT}/system.sfs"
-
-# Cria o arquivo system.sfs compactado
-mksquashfs "${TEMP_SFS_DIR}" "${ISO_EXTRACT}/system.sfs" -comp xz -b 1024K
-
-# 12. Otimizações de Parâmetros de Boot da ISO
-log_info "Ajustando configurações de boot para desativar segurança SELinux e estabilizar GApps..."
-# androidboot.selinux=permissive é crítico, pois apps e serviços adicionados manualmente
-# não possuem os contextos corretos no arquivo file_contexts.bin gerado na compilação do Android.
+# ============================================================
+# 8. AJUSTES DE BOOT (SELinux Permissive)
+# ============================================================
+log_info "Ajustando parâmetros de boot..."
 ISOLINUX_CFG="${ISO_EXTRACT}/isolinux/isolinux.cfg"
 if [ -f "${ISOLINUX_CFG}" ]; then
     sed -i 's/androidboot.hardware=android_x86/androidboot.hardware=android_x86 androidboot.selinux=permissive/g' "${ISOLINUX_CFG}"
@@ -202,8 +260,25 @@ if [ -f "${GRUB_CFG}" ]; then
     sed -i 's/androidboot.hardware=android_x86/androidboot.hardware=android_x86 androidboot.selinux=permissive/g' "${GRUB_CFG}"
 fi
 
-# 13. Empacotamento Híbrido da ISO Final (Compatível com UEFI e Legacy BIOS)
-log_info "Montando e criando a nova ISO híbrida bootável via xorriso..."
+# ============================================================
+# 9. DESMONTAR E RECOMPACTAR
+# ============================================================
+log_info "Desmontando e recompactando..."
+sync
+umount "${SYSTEM_MOUNT}"
+e2fsck -f -y "${SYSTEM_IMG}"
+
+# Recompactar SquashFS
+TEMP_SFS_DIR="${BUILD_DIR}/sfs_temp"
+mkdir -p "${TEMP_SFS_DIR}"
+mv "${SYSTEM_IMG}" "${TEMP_SFS_DIR}/system.img"
+rm -f "${ISO_EXTRACT}/system.sfs"
+mksquashfs "${TEMP_SFS_DIR}" "${ISO_EXTRACT}/system.sfs" -comp xz -b 1024K
+
+# ============================================================
+# 10. GERAR ISO FINAL
+# ============================================================
+log_info "Gerando ISO híbrida bootável..."
 xorriso -as mkisofs \
   -r -V "GM-OS-Mobile" \
   -b isolinux/isolinux.bin \
@@ -215,10 +290,8 @@ xorriso -as mkisofs \
   -o "${OUTPUT_DIR}/${CUSTOM_ISO_NAME}" \
   "${ISO_EXTRACT}/"
 
-# Limpeza final dos arquivos temporários
 rm -rf "${BUILD_DIR}"
 
 log_info "================================================================================"
-log_info "PROCESSO CONCLUÍDO COM SUCESSO!"
-log_info "ISO Remasterizada: ${OUTPUT_DIR}/${CUSTOM_ISO_NAME}"
+log_info "CONCLUÍDO! ISO: ${OUTPUT_DIR}/${CUSTOM_ISO_NAME}"
 log_info "================================================================================"

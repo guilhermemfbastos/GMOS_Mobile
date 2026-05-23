@@ -1,121 +1,29 @@
-name: GM OS Mobile ISO Build Pipeline
+name: GM OS Mobile ISO Build
 
 on:
   push:
     branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
-  workflow_dispatch: # Permite disparar manualmente via console do GitHub
+  workflow_dispatch:
 
 jobs:
-  build-launcher:
-    name: Compilar GM UI Launcher
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout do Repositório
-        uses: actions/checkout@v4
-
-      - name: Configurar JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-          cache: 'gradle'
-
-      - name: Gerar Gradle Wrapper e Conceder Permissões
-        run: |
-          mkdir temp_gradle
-          cd temp_gradle
-          touch settings.gradle
-          gradle wrapper --gradle-version 7.5
-          cd ..
-          mv temp_gradle/gradlew .
-          mv temp_gradle/gradlew.bat .
-          mv temp_gradle/gradle .
-          rm -rf temp_gradle
-          chmod +x gradlew
-
-      - name: Compilar APK (Release)
-        run: ./gradlew assembleRelease
-
-      - name: Fazer Upload do APK Compilado
-        uses: actions/upload-artifact@v4
-        with:
-          name: gm-ui-apk
-          path: app/build/outputs/apk/release/app-release-unsigned.apk
-
   remaster-iso:
     name: Remasterizar ISO Android-x86
-    needs: build-launcher
     runs-on: ubuntu-latest
     steps:
       - name: Checkout do Repositório
         uses: actions/checkout@v4
 
-      - name: Instalar Dependências do Sistema Linux
+      - name: Instalar Dependências do Sistema
         run: |
           sudo apt-get update
-          sudo apt-get install -y squashfs-tools xorriso p7zip-full e2fsprogs wget lzip
-
-      - name: Fazer Download do GM UI Launcher Compilado
-        uses: actions/download-artifact@v4
-        with:
-          name: gm-ui-apk
-          path: .
-
-      - name: Renomear Launcher para Nome Padrão
-        run: mv app-release-unsigned.apk GM_UI.apk
-
-      - name: Baixar e Extrair Pacote OpenGApps (x86, Android 9.0, Pico)
-        run: |
-          mkdir -p gapps
-          # Baixa do repositório oficial de pacotes OpenGApps (Arquitetura x86, Versão Android 9.0, Variante Pico)
-          OPENGAPPS_VERSION="20220215" # Versão estável do OpenGApps
-          GAPPS_ZIP="open_gapps-x86-9.0-pico-${OPENGAPPS_VERSION}.zip"
-          GAPPS_URL="https://github.com/opengapps/x86/releases/download/${OPENGAPPS_VERSION}/${GAPPS_ZIP}"
-          
-          log_status() { echo ">>> $1"; }
-          
-          log_status "Baixando OpenGApps..."
-          wget -q --show-progress "$GAPPS_URL" || {
-            # Mirror de fallback caso o repositório principal falhe
-            log_status "Falha ao baixar do GitHub, tentando mirror alternativo..."
-            wget -q --show-progress "https://netcologne.dl.sourceforge.net/project/opengapps/x86/9.0/${GAPPS_ZIP}"
-          }
-          
-          log_status "Extraindo ZIP do OpenGApps..."
-          unzip -q "$GAPPS_ZIP" -d gapps_temp
-          
-          log_status "Extraindo tarballs internos do GApps..."
-          # Extrai os componentes centrais (GMS, Store, Framework, Login)
-          # Os arquivos estão compactados com lzip (.tar.lz)
-          mkdir -p extracted_tar
-          
-          # Google Services Framework
-          tar --lzip -xf gapps_temp/Core/gsfcore-all.tar.lz -C extracted_tar/
-          # Google Play Services
-          tar --lzip -xf gapps_temp/Core/gmscore-x86.tar.lz -C extracted_tar/
-          # Google Play Store
-          tar --lzip -xf gapps_temp/Core/phonesky-all.tar.lz -C extracted_tar/
-          # Google Login Service
-          tar --lzip -xf gapps_temp/Core/googleloginservice-all.tar.lz -C extracted_tar/
-          
-          log_status "Copiando APKs extraídos para a pasta de injeção..."
-          cp extracted_tar/gsfcore-all/nodpi/priv-app/GoogleServicesFramework/GoogleServicesFramework.apk gapps/
-          cp extracted_tar/gmscore-x86/nodpi/priv-app/PrebuiltGmsCore/PrebuiltGmsCore.apk gapps/
-          cp extracted_tar/phonesky-all/nodpi/priv-app/Phonesky/Phonesky.apk gapps/
-          cp extracted_tar/googleloginservice-all/nodpi/priv-app/GoogleLoginService/GoogleLoginService.apk gapps/
-          
-          log_status "GApps preparados para a remasterização."
-          # Limpeza de arquivos temporários de download
-          rm -rf gapps_temp extracted_tar "$GAPPS_ZIP"
+          sudo apt-get install -y squashfs-tools xorriso p7zip-full e2fsprogs wget imagemagick zip bc
 
       - name: Executar Script de Remasterização
         run: |
           chmod +x scripts/remaster.sh
           sudo ./scripts/remaster.sh
 
-      - name: Fazer Upload da ISO GM OS Mobile Final
+      - name: Upload da ISO GM OS Mobile
         uses: actions/upload-artifact@v4
         with:
           name: GM-OS-Mobile-ISO

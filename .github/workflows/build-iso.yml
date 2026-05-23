@@ -19,7 +19,7 @@ jobs:
       - name: Executar Script de Remasterização
         run: |
           chmod +x scripts/remaster.sh
-          sudo ./scripts/remaster.sh
+          sudo GITHUB_ACTIONS=true ./scripts/remaster.sh
 
       - name: Upload da ISO GM OS Mobile
         uses: actions/upload-artifact@v4

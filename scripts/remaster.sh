@@ -21,7 +21,7 @@ log_error() { echo -e "${RED}[ERROR] $1${NC}"; }
 # TRAVA DE SEGURANÇA (NO_COMPILE)
 # ============================================================
 # Ignora a trava se estiver rodando dentro do GitHub Actions
-if [ "${GITHUB_ACTIONS}" != "true" ]; then
+if [ "${GITHUB_ACTIONS}" != "true" ] && [ "${SUDO_USER}" != "runner" ] && [ ! -d "/home/runner/work" ]; then
     if [ -f ".no_compile_lock" ] || [ -f "../.no_compile_lock" ] || [ "${NO_COMPILE}" = "true" ]; then
         log_warn "================================================================="
         log_warn "🔒 TRAVA DE COMPILAÇÃO ATIVA!"

@@ -2,6 +2,51 @@ import time
 import sys
 from vncdotool import api
 
+# Mapa de caracteres especiais para nomes de tecla do vncdotool
+SHIFT_MAP = {
+    '!': 'shift-1',
+    '@': 'shift-2',
+    '#': 'shift-3',
+    '$': 'shift-4',
+    '%': 'shift-5',
+    '^': 'shift-6',
+    '&': 'shift-7',
+    '*': 'shift-8',
+    '(': 'shift-9',
+    ')': 'shift-0',
+    '_': 'shift--',
+    '+': 'shift-=',
+    '{': 'shift-[',
+    '}': 'shift-]',
+    '|': 'shift-\\',
+    ':': 'shift-;',
+    '"': "shift-'",
+    '<': 'shift-,',
+    '>': 'shift-.',
+    '?': 'shift-/',
+    '~': 'shift-`',
+}
+
+SPECIAL_MAP = {
+    ' ': 'space',
+    '\t': 'tab',
+    '/': 'fslash',
+    '\\': 'bslash',
+}
+
+def vnc_type(client, text):
+    """Digita texto usando keyPress caractere por caractere."""
+    for ch in text:
+        if ch in SHIFT_MAP:
+            client.keyPress(SHIFT_MAP[ch])
+        elif ch in SPECIAL_MAP:
+            client.keyPress(SPECIAL_MAP[ch])
+        elif ch.isupper():
+            client.keyPress(f'shift-{ch.lower()}')
+        else:
+            client.keyPress(ch)
+    time.sleep(0.2)
+
 def main():
     print("Conectando ao VNC em 127.0.0.1:5900...")
     client = None
@@ -32,12 +77,12 @@ def main():
     
     print("Executando o script de customização...")
     # Executa o script baixado via HTTP local
-    client.typeString("curl -s http://10.0.2.2:8000/gmos-builder/customize.sh | bash")
+    vnc_type(client, "curl -s http://10.0.2.2:8000/gmos-builder/customize.sh | bash")
     client.keyPress('enter')
     time.sleep(5)
     
     print("Fechando o terminal...")
-    client.typeString("exit")
+    vnc_type(client, "exit")
     client.keyPress('enter')
     
     print("Customização concluída!")

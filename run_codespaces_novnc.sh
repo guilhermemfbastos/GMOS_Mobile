@@ -49,16 +49,52 @@ elif [ -f "GM-OS-Mobile.iso" ]; then
     ISO_PATH="GM-OS-Mobile.iso"
 else
     log_warn "Nenhuma ISO local encontrada em 'output/GM-OS-Mobile.iso' ou 'GM-OS-Mobile.iso'."
-    log_info "Baixando o último build de sucesso do GitHub Releases..."
     mkdir -p output
     ISO_PATH="output/GM-OS-Mobile.iso"
-    RELEASE_URL="https://github.com/guilhermemfbastos/GMOS_Mobile/releases/latest/download/GM-OS-Mobile.iso"
-    
-    # Baixar usando wget ou curl
-    if command -v wget &> /dev/null; then
-        wget -O "$ISO_PATH" "$RELEASE_URL"
-    else
-        curl -L -o "$ISO_PATH" "$RELEASE_URL"
+    DOWNLOADED=false
+
+    # Método 1: Usar gh CLI (mais confiável no Codespaces por herdar autenticação)
+    if command -v gh &> /dev/null; then
+        log_info "Tentando baixar a ISO da última Release via GitHub CLI (gh)..."
+        if gh release download latest -p "GM-OS-Mobile.iso" --dir output --clobber 2>/dev/null; then
+            log_info "ISO baixada com sucesso da release do GitHub."
+            DOWNLOADED=true
+        else
+            log_warn "Não foi possível baixar da release com gh. Tentando baixar do último build de sucesso (Actions)..."
+            RUN_ID=$(gh run list --workflow "GM OS Mobile ISO Build" --status success --limit 1 --json databaseId --jq '.[0].databaseId' 2>/dev/null || true)
+            if [ -n "$RUN_ID" ]; then
+                log_info "Baixando artefato do build de Actions ID: $RUN_ID..."
+                if gh run download "$RUN_ID" -n "GM-OS-Mobile-ISO" --dir output --clobber 2>/dev/null; then
+                    log_info "ISO baixada do build com sucesso."
+                    DOWNLOADED=true
+                fi
+            fi
+        fi
+    fi
+
+    # Método 2: Baixar por link público wget/curl se o método anterior falhar
+    if [ "$DOWNLOADED" = false ]; then
+        log_info "Tentando baixar via URL pública com wget/curl..."
+        RELEASE_URL="https://github.com/guilhermemfbastos/GMOS_Mobile/releases/latest/download/GM-OS-Mobile.iso"
+        
+        # Baixar usando wget ou curl
+        if command -v wget &> /dev/null; then
+            if wget -O "$ISO_PATH" "$RELEASE_URL" 2>/dev/null; then
+                DOWNLOADED=true
+            fi
+        else
+            if curl -L -o "$ISO_PATH" "$RELEASE_URL" 2>/dev/null; then
+                DOWNLOADED=true
+            fi
+        fi
+    fi
+
+    # Verificar se conseguimos obter a ISO
+    if [ ! -f "$ISO_PATH" ] || [ ! -s "$ISO_PATH" ]; then
+        log_error "Erro: Não foi possível obter o arquivo GM-OS-Mobile.iso por nenhum método!"
+        log_error "Como a trava de compilação está ativa, você precisa colocar um arquivo ISO válido em 'output/GM-OS-Mobile.iso' manualmente ou executar a Action 'GM OS Mobile ISO Build' no GitHub para gerar o primeiro build."
+        rm -f "$ISO_PATH" # Remove arquivo vazio se houver
+        exit 1
     fi
 fi
 

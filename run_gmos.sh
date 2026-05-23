@@ -84,8 +84,8 @@ log_info "Iniciando QEMU em background..."
 rm -f qemu_boot.log
 
 qemu-system-x86_64 \
-  -m 2048 \
-  -smp 2 \
+  -m 4096 \
+  -smp 4 \
   $QEMU_ACCEL \
   -boot d \
   -cdrom "$ISO_PATH" \

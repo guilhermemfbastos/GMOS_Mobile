@@ -100,7 +100,7 @@ if [ ! -f "$ISO_PATH" ] || [ $(stat -c%s "$ISO_PATH" 2>/dev/null || echo 0) -lt 
     exit 1
 fi
 
-log_info "Usando a ISO: $ISO_PATH"
+log_info "Usando a ISO: $ISO_PATH ($(stat -c%s "$ISO_PATH" 2>/dev/null || echo 0) bytes)"
 
 # 3. Criar disco virtual de 4GB se não existir (para salvar estados/testar instalação)
 if [ ! -f "android_disk.qcow2" ]; then
@@ -116,12 +116,14 @@ fi
 
 # 5. Detectar suporte a KVM
 QEMU_ACCEL=""
+QEMU_SMP="2"
 if [ -w /dev/kvm ]; then
     log_info "Aceleração por hardware KVM disponível!"
     QEMU_ACCEL="-enable-kvm -cpu host"
 else
-    log_warn "KVM não está disponível (comum em ambientes de containers). Usando emulador de software TCG com CPU de recursos máximos."
+    log_warn "KVM não está disponível (comum em ambientes de containers). Usando emulador de software TCG com CPU de recursos máximos e 1 núcleo (smp 1) para estabilidade."
     QEMU_ACCEL="-accel tcg -cpu max"
+    QEMU_SMP="1"
 fi
 
 # 6. Finalizar processos antigos se houver
@@ -135,7 +137,7 @@ log_info "Iniciando QEMU em background (headless)..."
 # -daemonize roda em background
 sudo qemu-system-x86_64 \
   -m 2048 \
-  -smp 2 \
+  -smp $QEMU_SMP \
   $QEMU_ACCEL \
   -boot d \
   -cdrom "$ISO_PATH" \

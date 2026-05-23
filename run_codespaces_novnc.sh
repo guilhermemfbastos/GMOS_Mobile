@@ -56,15 +56,15 @@ else
     # Método 1: Usar gh CLI (mais confiável no Codespaces por herdar autenticação)
     if command -v gh &> /dev/null; then
         log_info "Tentando baixar a ISO da última Release via GitHub CLI (gh)..."
-        if gh release download latest -p "GM-OS-Mobile.iso" --dir output --clobber 2>/dev/null; then
+        if gh release download latest -p "GM-OS-Mobile.iso" --dir output --clobber; then
             log_info "ISO baixada com sucesso da release do GitHub."
             DOWNLOADED=true
         else
             log_warn "Não foi possível baixar da release com gh. Tentando baixar do último build de sucesso (Actions)..."
-            RUN_ID=$(gh run list --workflow "GM OS Mobile ISO Build" --status success --limit 1 --json databaseId --jq '.[0].databaseId' 2>/dev/null || true)
+            RUN_ID=$(gh run list --workflow "GM OS Mobile ISO Build" --status success --limit 1 --json databaseId --jq '.[0].databaseId' || true)
             if [ -n "$RUN_ID" ]; then
                 log_info "Baixando artefato do build de Actions ID: $RUN_ID..."
-                if gh run download "$RUN_ID" -n "GM-OS-Mobile-ISO" --dir output --clobber 2>/dev/null; then
+                if gh run download "$RUN_ID" -n "GM-OS-Mobile-ISO" --dir output --clobber; then
                     log_info "ISO baixada do build com sucesso."
                     DOWNLOADED=true
                 fi

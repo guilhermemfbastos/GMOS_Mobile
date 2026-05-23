@@ -63,7 +63,13 @@ docker run --rm --privileged -v "${WORKSPACE_DIR}:/workspace" alpine:latest /bin
     # Compilando a ISO
     cd /workspace/aports/scripts
     echo "[DOCKER] Iniciando processo de geração da ISO do GM OS..."
-    su builder -c "sh mkimage.sh --tag 1.0 --outdir /workspace/output --profile gmos"
+    REPOS=""
+    for r in $(cat /etc/apk/repositories); do
+        case "$r" in
+            http*) REPOS="$REPOS --repository $r" ;;
+        esac
+    done
+    su builder -c "sh mkimage.sh --tag 1.0 --outdir /workspace/output --profile gmos $REPOS"
     
     echo "[DOCKER] Compilação concluída!"
 '

@@ -84,7 +84,7 @@ log_info "Iniciando QEMU em background..."
 rm -f qemu_boot.log
 
 qemu-system-x86_64 \
-  -m 2560 \
+  -m 2048 \
   -smp 2 \
   $QEMU_ACCEL \
   -boot d \

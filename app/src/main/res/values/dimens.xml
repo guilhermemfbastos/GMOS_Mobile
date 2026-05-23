@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- Tamanho padrão dos atalhos na área de trabalho -->
-    <dimen name="shortcut_size">96dp</dimen>
-</resources>

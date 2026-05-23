@@ -136,13 +136,13 @@ log_info "Iniciando QEMU em background (headless)..."
 # -vnc :0 configura o VNC na porta 5900
 # -daemonize roda em background
 sudo qemu-system-x86_64 \
-  -m 2048 \
+  -m 1536 \
   -smp $QEMU_SMP \
   $QEMU_ACCEL \
   -boot d \
   -cdrom "$ISO_PATH" \
   -hda android_disk.qcow2 \
-  -vga std \
+  -vga virtio \
   -usb \
   -device usb-tablet \
   -k en-us \

@@ -120,8 +120,8 @@ if [ -w /dev/kvm ]; then
     log_info "Aceleração por hardware KVM disponível!"
     QEMU_ACCEL="-enable-kvm -cpu host"
 else
-    log_warn "KVM não está disponível (comum em ambientes de containers). Usando emulador de software TCG."
-    QEMU_ACCEL="-accel tcg"
+    log_warn "KVM não está disponível (comum em ambientes de containers). Usando emulador de software TCG com CPU de recursos máximos."
+    QEMU_ACCEL="-accel tcg -cpu max"
 fi
 
 # 6. Finalizar processos antigos se houver

@@ -22,8 +22,10 @@ jobs:
           java-version: '11'
           cache: 'gradle'
 
-      - name: Conceder permissão de execução ao Gradle Wrapper
-        run: chmod +x gradlew
+      - name: Gerar Gradle Wrapper e Conceder Permissões
+        run: |
+          gradle wrapper --gradle-version 7.4.2
+          chmod +x gradlew
 
       - name: Compilar APK (Release)
         run: ./gradlew assembleRelease

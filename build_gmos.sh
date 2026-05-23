@@ -69,7 +69,7 @@ docker run --rm --privileged -v "${WORKSPACE_DIR}:/workspace" alpine:latest /bin
             http*) REPOS="$REPOS --repository $r" ;;
         esac
     done
-    su builder -c "sh mkimage.sh --tag 1.0 --outdir /workspace/output --profile gmos $REPOS"
+    su builder -c "export MKSQUASHFS_OPTS='-noI -noD -noF -no-fragments'; sh mkimage.sh --tag 1.0 --outdir /workspace/output --profile gmos $REPOS"
     
     echo "[DOCKER] Compilação concluída!"
 '

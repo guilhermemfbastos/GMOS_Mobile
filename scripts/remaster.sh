@@ -20,14 +20,17 @@ log_error() { echo -e "${RED}[ERROR] $1${NC}"; }
 # ============================================================
 # TRAVA DE SEGURANÇA (NO_COMPILE)
 # ============================================================
-if [ -f ".no_compile_lock" ] || [ -f "../.no_compile_lock" ] || [ "${NO_COMPILE}" = "true" ]; then
-    log_warn "================================================================="
-    log_warn "🔒 TRAVA DE COMPILAÇÃO ATIVA!"
-    log_warn "A recompilação da ISO foi bloqueada para evitar novos builds demorados."
-    log_warn "Para compilar novamente, remova o arquivo '.no_compile_lock' ou"
-    log_warn "remova a variável de ambiente NO_COMPILE."
-    log_warn "================================================================="
-    exit 0
+# Ignora a trava se estiver rodando dentro do GitHub Actions
+if [ "${GITHUB_ACTIONS}" != "true" ]; then
+    if [ -f ".no_compile_lock" ] || [ -f "../.no_compile_lock" ] || [ "${NO_COMPILE}" = "true" ]; then
+        log_warn "================================================================="
+        log_warn "🔒 TRAVA DE COMPILAÇÃO ATIVA!"
+        log_warn "A recompilação da ISO foi bloqueada para evitar novos builds demorados."
+        log_warn "Para compilar novamente, remova o arquivo '.no_compile_lock' ou"
+        log_warn "remova a variável de ambiente NO_COMPILE."
+        log_warn "================================================================="
+        exit 0
+    fi
 fi
 
 log_info "Iniciando remasterização GM OS Mobile..."

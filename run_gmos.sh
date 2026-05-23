@@ -69,9 +69,9 @@ if [ -w /dev/kvm ]; then
 fi
 
 log_info "Limpando instâncias antigas..."
-killall qemu-system-x86_64 websockify 2>/dev/null || true
+sudo killall qemu-system-x86_64 websockify 2>/dev/null || true
 # Fecha qualquer servidor Python rodando na porta 8000
-kill -9 $(lsof -t -i:8000) 2>/dev/null || true
+sudo kill -9 $(sudo lsof -t -i:8000) 2>/dev/null || true
 sleep 1
 
 # 5. Iniciar Servidor HTTP temporário para servir os arquivos de customização (wallpaper + script)

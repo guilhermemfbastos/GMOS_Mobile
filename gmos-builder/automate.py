@@ -87,6 +87,9 @@ def main():
     time.sleep(15)
     
     print("Customização concluída! O terminal ficará aberto para debug.")
+    
+    # Desconecta de forma limpa para evitar a exceção "Transport endpoint is not connected"
+    client.disconnect()
 
 if __name__ == '__main__':
     main()

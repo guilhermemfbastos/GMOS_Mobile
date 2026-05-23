@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#121212"
+    tools:context=".MainActivity">
+
+    <!-- Wallpaper de Fundo (Pode ser alterado dinamicamente) -->
+    <ImageView
+        android:id="@+id/img_wallpaper"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:src="@android:color/darker_gray"
+        android:contentDescription="Plano de Fundo" />
+
+    <!-- WORKSPACE: Área de Trabalho principal à Direita -->
+    <FrameLayout
+        android:id="@+id/workspace"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:background="#20000000"
+        app:layout_constraintLeft_toRightOf="@id/taskbar"
+        app:layout_constraintRight_toRightOf="parent">
+
+        <!-- Container Absoluto ou Relativo para posicionar atalhos via X/Y -->
+        <FrameLayout
+            android:id="@+id/desktop_shortcuts_container"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+    </FrameLayout>
+
+    <!-- BARRA DE TAREFAS VERTICAL (TASKBAR): Fixada na Esquerda (0-100% de altura) -->
+    <LinearLayout
+        android:id="@+id/taskbar"
+        android:layout_width="80dp"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="#CC111111"
+        android:elevation="8dp"
+        android:padding="8dp"
+        android:gravity="center_horizontal"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <!-- Botão Gaveta de Apps (App Drawer) -->
+        <ImageButton
+            android:id="@+id/btn_app_drawer"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginTop="16dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_sort_by_size"
+            android:contentDescription="Gaveta de Aplicativos"
+            android:padding="12dp"
+            android:scaleType="fitCenter" />
+
+        <!-- Lista Vertical de Apps Favoritos/Ativos -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_pinned_apps"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp"
+            android:scrollbars="none" />
+
+        <!-- Botão Configurações Rápidas / Sistema -->
+        <ImageButton
+            android:id="@+id/btn_settings"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginBottom="16dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_preferences"
+            android:contentDescription="Configurações do Sistema"
+            android:padding="12dp"
+            android:scaleType="fitCenter" />
+
+    </LinearLayout>
+
+    <!-- GAVETA DE APPS (APP DRAWER): Painel deslizante ou fixo que aparece à direita da Barra -->
+    <FrameLayout
+        android:id="@+id/app_drawer_container"
+        android:layout_width="320dp"
+        android:layout_height="match_parent"
+        android:background="#E61A1A1A"
+        android:elevation="12dp"
+        android:visibility="gone"
+        app:layout_constraintLeft_toRightOf="@id/taskbar"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        tools:visibility="visible">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Aplicativos"
+                android:textColor="#FFFFFF"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="16dp" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_apps"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:scrollbars="vertical" />
+        </LinearLayout>
+
+    </FrameLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,38 @@
+name: Build GM OS ISO
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: # Permite rodar manualmente
+
+jobs:
+  build-iso:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y live-build debootstrap grub-pc-bin grub-efi-amd64-bin xorriso dosfstools mtools qemu-system-x86 python3-flask python3-psutil
+
+    - name: Build ISO
+      run: |
+        chmod +x build_gmos.sh
+        sudo ./build_gmos.sh
+
+    - name: Upload ISO Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: gmos-iso
+        path: gmos-build/binary.hybrid.iso
+        retention-days: 5
+
+    - name: Upload Build Log (if failed)
+      if: failure()
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-log
+        path: output/build.log

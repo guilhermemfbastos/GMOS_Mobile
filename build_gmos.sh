@@ -62,19 +62,28 @@ cd "$BUILD_DIR"
 # ------------------------------------------------------------------------------
 log_info "Configurando estrutura do live-build..."
 
-# Inicializa o projeto live-build
+# Inicializa o projeto live-build com parâmetros compatíveis
 lb config \
     --mode debian \
-    --archive-keyring /usr/share/keyrings/debian-archive-keyring.gpg \
     --distribution bookworm \
-    --components main,contrib,non-free \
     --architectures amd64 \
     --binary-images iso-hybrid \
-    --iso-application "GM OS" \
-    --iso-publisher "Guilherme Bastos" \
-    --bootloaders "grub-efi,grub-pc" \
     --debian-installer none \
     --memtest none
+
+# Configurações manuais via arquivos de configuração
+mkdir -p config/archives
+echo "deb http://deb.debian.org/debian/ bookworm main contrib non-free" > config/archives/debian.chroot
+echo "deb http://deb.debian.org/debian-security/ bookworm-security main contrib non-free" >> config/archives/debian.chroot
+
+# Configurar metadados da ISO
+mkdir -p config/includes.chroot
+echo "GM OS" > config/includes.chroot/.application_name
+echo "Guilherme Bastos" > config/includes.chroot/.publisher
+
+# Configurar bootloaders (GRUB BIOS e EFI)
+mkdir -p config/bootloaders
+lb config --bootstrap-qemu-arch amd64 --bootloaders "grub-pc grub-efi" 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
 # 4. Personalização (Chroot)

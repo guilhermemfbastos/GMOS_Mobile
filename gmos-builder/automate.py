@@ -14,7 +14,7 @@ SHIFT_MAP = {
     '*': 'shift-8',
     '(': 'shift-9',
     ')': 'shift-0',
-    '_': 'shift--',
+    '_': 'shift-minus',
     '+': 'shift-=',
     '{': 'shift-[',
     '}': 'shift-]',

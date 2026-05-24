@@ -6,7 +6,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-echo -e "${GREEN}[INFO] Iniciando compilação do GM OS 1.0 (SEM DOCKER)...${NC}"
+echo -e "${GREEN}[INFO] Iniciando compilação do GM OS 1.0 (Build Nativo no Alpine)...${NC}"
 
 # Detecta o sistema operacional
 if [ -f /etc/os-release ]; then
@@ -39,12 +39,12 @@ if [ "$OS_ID" = "alpine" ]; then
         su builder -c "abuild-keygen -a -i -n"
     fi
 elif [ "$OS_ID" = "debian" ] || [ "$OS_ID" = "ubuntu" ]; then
-    echo -e "${GREEN}[INFO] Sistema Debian/Ubuntu detectado. Este script requer Alpine Linux nativo.${NC}"
-    echo -e "${YELLOW}[WARN] Para sistemas Debian/Ubuntu, use o script build_gmos.sh com Docker.${NC}"
+    echo -e "${RED}[ERROR] Sistema Debian/Ubuntu detectado. Este script requer Alpine Linux nativo.${NC}"
+    echo -e "${YELLOW}[WARN] Para sistemas Debian/Ubuntu, considere usar uma VM ou container Alpine.${NC}"
     exit 1
 else
     echo -e "${RED}[ERROR] Sistema operacional não suportado: $OS_ID${NC}"
-    echo -e "${RED}[INFO] Use Docker ou execute em Alpine Linux nativo.${NC}"
+    echo -e "${RED}[INFO] Execute este script em Alpine Linux nativo.${NC}"
     exit 1
 fi
 

@@ -13,8 +13,8 @@ profile_gmos() {
     
     # Pacotes básicos do Alpine
     apks="alpine-base alpine-conf alpine-keys busybox openrc"
-    # Kernel e firmware (sem linux-firmware-none para evitar conflitos)
-    apks="$apks linux-lts linux-firmware"
+    # Kernel e firmware (linux-virt é mais leve, estável e compatível para ISOs)
+    apks="$apks linux-virt linux-firmware wireless-regdb"
     # Ambiente gráfico XFCE com display manager
     apks="$apks xfce4 xfce4-terminal lightdm lightdm-gtk-greeter dbus xorg-server xorg-xinit xf86-video-modesetting xf86-input-libinput eudev"
     # Utilitários e ferramentas
@@ -28,8 +28,8 @@ profile_gmos() {
     # Suporte a idiomas e teclado ABNT2
     apks="$apks setxkbmap xkeyboard-config"
     
-    kernel_flavors="lts"
-    kernel_cmdline="console=tty0 hostname=gmos quiet splash"
+    kernel_flavors="virt"
+    kernel_cmdline="console=tty0 hostname=gmos quiet modules=ext4"
     syslinux_serial="0 115200"
     apkovl="genapkovl-gmos.sh"
     

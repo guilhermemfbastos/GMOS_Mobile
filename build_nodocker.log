@@ -1,0 +1,3 @@
+[0;32m[INFO] Iniciando compilação do GM OS 1.0 (SEM DOCKER)...[0m
+[0;32m[INFO] Instalando ferramentas de build...[0m
+build_gmos_nodocker.sh: line 12: apk: command not found

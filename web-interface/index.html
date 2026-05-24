@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GM OS Dashboard</title>
+    <style>
+        :root {
+            --primary: #0078d7;
+            --bg: #1a1a1a;
+            --panel: #2d2d2d;
+            --text: #ffffff;
+            --success: #28a745;
+            --danger: #dc3545;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background-color: var(--panel);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        h2 { margin-top: 0; color: var(--primary); }
+        .stat-value { font-size: 2em; font-weight: bold; }
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+        }
+        button:hover { opacity: 0.9; }
+        button.danger { background-color: var(--danger); }
+        #terminal {
+            background: #000;
+            color: #0f0;
+            font-family: monospace;
+            height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .loading { animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 0.5; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Sistema</h2>
+        <p>Status: <span id="sys-status" class="loading">Conectando...</span></p>
+        <p>Hostname: <span id="sys-hostname">-</span></p>
+        <p>Uptime: <span id="sys-uptime">-</span></p>
+        <button onclick="updateSystem()">Atualizar Sistema</button>
+    </div>
+
+    <div class="card">
+        <h2>Recursos</h2>
+        <p>CPU: <span id="cpu-load">-</span></p>
+        <p>Memória: <span id="mem-load">-</span></p>
+        <p>Disco: <span id="disk-load">-</span></p>
+    </div>
+
+    <div class="card">
+        <h2>Terminal Web</h2>
+        <div id="terminal">Aguardando comando...</div>
+        <input type="text" id="cmd-input" placeholder="Digite um comando (ex: ls -la)" 
+               style="width: 90%; padding: 8px; margin-top: 10px; background: #333; color: white; border: none;"
+               onkeypress="if(event.key === 'Enter') runCommand()">
+        <button onclick="runCommand()">Executar</button>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin + '/api';
+
+        async function fetchData() {
+            try {
+                const res = await fetch(`${API_URL}/status`);
+                const data = await res.json();
+                
+                document.getElementById('sys-status').innerText = 'Online';
+                document.getElementById('sys-status').classList.remove('loading');
+                document.getElementById('sys-status').style.color = 'var(--success)';
+                
+                document.getElementById('sys-hostname').innerText = data.hostname;
+                document.getElementById('sys-uptime').innerText = data.uptime;
+                document.getElementById('cpu-load').innerText = data.cpu + '%';
+                document.getElementById('mem-load').innerText = data.memory;
+                document.getElementById('disk-load').innerText = data.disk;
+            } catch (e) {
+                console.error(e);
+                document.getElementById('sys-status').innerText = 'Offline';
+            }
+        }
+
+        async function runCommand() {
+            const input = document.getElementById('cmd-input');
+            const term = document.getElementById('terminal');
+            const cmd = input.value;
+            
+            term.innerHTML += `<div>> ${cmd}</div>`;
+            input.value = '';
+
+            try {
+                const res = await fetch(`${API_URL}/run`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ command: cmd })
+                });
+                const data = await res.json();
+                term.innerHTML += `<div>${data.output.replace(/\n/g, '<br>')}</div><br>`;
+                term.scrollTop = term.scrollHeight;
+            } catch (e) {
+                term.innerHTML += `<div style="color:red">Erro: ${e.message}</div>`;
+            }
+        }
+
+        async function updateSystem() {
+            if(confirm('Deseja atualizar todo o sistema? Isso pode demorar.')) {
+                alert('Iniciando atualização... Acompanhe no terminal.');
+                document.getElementById('cmd-input').value = 'sudo apt update && sudo apt upgrade -y';
+                runCommand();
+            }
+        }
+
+        setInterval(fetchData, 5000);
+        fetchData();
+    </script>
+</body>
+</html>

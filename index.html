@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GM OS Mobile - Web Emulator</title>
+    <style>
+        body { margin: 0; padding: 0; background: #111; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+        #screen-container { width: 800px; height: 600px; border: 2px solid #444; background: #000; position: relative; box-shadow: 0 0 15px rgba(0,0,0,0.8); }
+        canvas { width: 100%; height: 100%; display: block; }
+        #loading { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; }
+        .spinner { border: 4px solid #333; border-top: 4px solid #00ff00; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #controls { margin-top: 15px; display: flex; gap: 10px; }
+        button { padding: 8px 16px; background: #333; color: #fff; border: 1px solid #555; cursor: pointer; border-radius: 4px; }
+        button:hover { background: #555; }
+        .error-msg { color: #ff4444; margin-top: 10px; max-width: 600px; text-align: center; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+
+    <div id="screen-container">
+        <div id="loading">
+            <div class="spinner"></div>
+            <div id="status-text">Iniciando GM OS Mobile...</div>
+            <div id="progress-text" style="margin-top: 5px; font-size: 0.8em; color: #aaa;">0%</div>
+            <div id="error-display" class="error-msg" style="display:none;"></div>
+        </div>
+    </div>
+
+    <div id="controls">
+        <button onclick="location.reload()">Reiniciar Sistema</button>
+        <button onclick="document.getElementById('screen-container').requestFullscreen()">Tela Cheia</button>
+    </div>
+
+    <!-- Carregando a biblioteca LOCALMENTE -->
+    <script src="v86_libs/libv86.js"></script>
+    
+    <script>
+        "use strict";
+
+        // Verifica se a biblioteca carregou
+        if (typeof V86Starter === 'undefined') {
+            document.getElementById('status-text').innerText = "Erro Crítico";
+            document.getElementById('error-display').style.display = 'block';
+            document.getElementById('error-display').innerText = "Falha ao carregar v86_libs/libv86.js. Verifique se o arquivo existe no repositório.";
+            throw new Error("V86Starter not defined");
+        }
+
+        const ISO_URL = "https://github.com/guilhermemfbastos/GMOS_Mobile/releases/latest/download/GM-OS-Mobile.iso";
+        let emulator;
+
+        function startEmulator() {
+            try {
+                emulator = new V86Starter({
+                    wasm_path: "v86_libs/v86.wasm", // Caminho local
+                    memory_size: 256 * 1024 * 1024, // 256MB (mais seguro para web)
+                    vga_memory_size: 4 * 1024 * 1024,
+                    screen_container: document.getElementById("screen-container"),
+                    bios: { url: "v86_libs/seabios.bin" }, // Caminho local
+                    vga_bios: { url: "v86_libs/vgabios.bin" }, // Caminho local
+                    cdrom: { url: ISO_URL },
+                    autostart: true,
+                    disable_keyboard: false,
+                    disable_mouse: false
+                });
+
+                emulator.add_listener("download-progress", function(progress) {
+                    const percent = Math.round(progress * 100);
+                    document.getElementById('progress-text').innerText = `Baixando ISO: ${percent}%`;
+                    if(percent >= 100) document.getElementById('status-text').innerText = "Booting...";
+                });
+
+                emulator.add_listener("screen-set-mode", function() {
+                    setTimeout(() => { document.getElementById('loading').style.display = 'none'; }, 800);
+                });
+
+            } catch (e) {
+                document.getElementById('status-text').innerText = "Erro na Inicialização";
+                document.getElementById('error-display').style.display = 'block';
+                document.getElementById('error-display').innerText = e.message;
+                console.error(e);
+            }
+        }
+
+        window.onload = startEmulator;
+    </script>
+</body>
+</html>

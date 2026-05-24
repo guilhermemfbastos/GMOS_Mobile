@@ -45,6 +45,10 @@ chmod +x /workspace/aports/scripts/mkimg.gmos.sh
 cp /workspace/gmos-builder/genapkovl-gmos.sh /workspace/aports/scripts/
 chmod +x /workspace/aports/scripts/genapkovl-gmos.sh
 
+# Copia o script xfce-mint-config.sh para ser instalado na ISO
+cp /workspace/gmos-builder/xfce-mint-config.sh /workspace/aports/scripts/
+chmod +x /workspace/aports/scripts/xfce-mint-config.sh
+
 # Registra o perfil GM OS na lista de perfis disponíveis
 echo "[DOCKER] Registrando perfil gmos..."
 if ! grep -q "gmos)" /workspace/aports/scripts/mkimage.sh 2>/dev/null; then

@@ -29,22 +29,15 @@ if [ -n "$DEPS_TO_INSTALL" ]; then
     sudo apt-get install -y $DEPS_TO_INSTALL
 fi
 
-# 2. Localizar ou baixar a ISO base
+# 2. Localizar ou usar a ISO compilada
 ISO_DIR="output"
 mkdir -p "$ISO_DIR"
-ISO_PATH="${1:-${ISO_DIR}/gmos-base.iso}"
+ISO_PATH="${1:-${ISO_DIR}/gmos-1.0-x86_64.iso}"
 
 if [ ! -f "$ISO_PATH" ]; then
-    log_info "A ISO base do GM OS (Linux Mint XFCE) não foi encontrada em $ISO_PATH."
-    log_info "Iniciando download automático (cerca de 2.3 GB, muito rápido no Codespaces)..."
-    ISO_URL="https://mirrors.kernel.org/linuxmint/stable/21.3/linuxmint-21.3-xfce-64bit.iso"
-    
-    # Baixa com barra de progresso
-    wget -O "$ISO_PATH" "$ISO_URL" || {
-        log_error "Falha ao baixar a ISO de: $ISO_URL"
-        exit 1
-    }
-    log_info "Download concluído com sucesso!"
+    log_error "A ISO do GM OS não foi encontrada em $ISO_PATH."
+    log_info "Execute primeiro: bash build_gmos.sh"
+    exit 1
 fi
 
 log_info "Usando a ISO do GM OS: $ISO_PATH"

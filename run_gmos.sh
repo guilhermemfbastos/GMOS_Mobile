@@ -39,7 +39,7 @@ fi
 # 2. Localizar ou baixar a ISO base
 ISO_DIR="output"
 mkdir -p "$ISO_DIR"
-ISO_PATH="${ISO_DIR}/gmos-base.iso"
+ISO_PATH="${1:-${ISO_DIR}/gmos-base.iso}"
 
 if [ ! -f "$ISO_PATH" ]; then
     log_info "A ISO base do GM OS (Linux Mint XFCE) não foi encontrada."

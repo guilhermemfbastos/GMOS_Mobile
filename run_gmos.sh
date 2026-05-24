@@ -79,7 +79,14 @@ log_info "Iniciando servidor HTTP temporário na porta 8000..."
 python3 -m http.server 8000 &
 HTTP_SERVER_PID=$!
 
-# 6. Iniciar QEMU
+# 6. Preparar disco virtual para geração da ISO
+if [ ! -f workspace.img ]; then
+    log_info "Criando disco virtual de 8GB para extração da ISO..."
+    qemu-img create -f raw workspace.img 8G
+    mkfs.ext4 -F workspace.img
+fi
+
+# 7. Iniciar QEMU
 log_info "Iniciando QEMU em background..."
 rm -f qemu_boot.log
 
@@ -93,6 +100,7 @@ qemu-system-x86_64 \
   -usb \
   -device usb-tablet \
   -k en-us \
+  -drive file=workspace.img,format=raw \
   -vnc 127.0.0.1:0,share=force-shared \
   > qemu_boot.log 2>&1 &
 

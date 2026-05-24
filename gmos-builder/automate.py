@@ -86,8 +86,17 @@ def main():
     print("Aguardando o script finalizar (15s)...")
     time.sleep(15)
     
-    print("Customização concluída! O terminal ficará aberto para debug.")
+    print("Customização concluída!")
     
+    print("Iniciando a exportação da ISO para o disco virtual...")
+    vnc_type(client, "curl -s http:")
+    vnc_type(client, "//10.0.2.2:")
+    vnc_type(client, "8000/gmos-builder/prepare_iso.sh ")
+    vnc_type(client, "| bash")
+    client.keyPress('enter')
+    
+    print("Aguardando exportação finalizar e a VM desligar (15s)...")
+    time.sleep(15)
     # Desconecta de forma limpa para evitar a exceção "Transport endpoint is not connected"
     client.disconnect()
 

@@ -1,0 +1,42 @@
+```bash
+# Environment
+.env
+.env.local
+*.env.*
+
+# Logs and temporary files
+*.log
+*.tmp
+*.swp
+
+# Editors
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.coverage
+htmlcov/
+.coverage.*
+.python-version
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Dependencies
+.venv/
+venv/
+.env/
+node_modules/
+
+# System files
+.DS_Store
+Thumbs.db
+```

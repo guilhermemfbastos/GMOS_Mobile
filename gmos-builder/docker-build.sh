@@ -53,12 +53,13 @@ chmod +x /workspace/aports/scripts/xfce-mint-config.sh
 echo "[DOCKER] Registrando perfil gmos..."
 if ! grep -q "gmos)" /workspace/aports/scripts/mkimage.sh 2>/dev/null; then
     # Adiciona o perfil gmos ao case statement do mkimage.sh
-    sed -i '/^case "\$PROFILE" in/i\
-# GM OS Profile\
-gmos)\
-    . "$SCRIPT_DIR/mkimg.gmos.sh"\
-    profile_gmos\
-    ;;' /workspace/aports/scripts/mkimage.sh
+    # O perfil deve ser inserido DENTRO do case, após a linha 'case "$PROFILE" in'
+    sed -i '/^case "\$PROFILE" in/a\
+    # GM OS Profile\
+    gmos)\
+        . "$SCRIPT_DIR/mkimg.gmos.sh"\
+        profile_gmos\
+        ;;' /workspace/aports/scripts/mkimage.sh
     echo "[DOCKER] Perfil gmos adicionado ao mkimage.sh"
 else
     echo "[DOCKER] Perfil gmos já está registrado no mkimage.sh"

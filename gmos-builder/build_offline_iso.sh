@@ -46,10 +46,10 @@ sudo umount $BUILD_DIR/squashfs-root/proc
 sudo umount $BUILD_DIR/squashfs-root/dev
 sudo rm -f $BUILD_DIR/squashfs-root/root/chroot_setup.sh
 
-echo "[GMOS] 8. Recompactando o sistema de arquivos (Isso demora bastante, pegue um café)..."
+echo "[GMOS] 8. Recompactando o sistema de arquivos (Isso demora alguns minutos)..."
 sudo rm -f $BUILD_DIR/extracted_iso/casper/filesystem.squashfs
-# Usamos -comp zstd (se suportado) ou default para melhor performance
-sudo mksquashfs $BUILD_DIR/squashfs-root $BUILD_DIR/extracted_iso/casper/filesystem.squashfs -comp zstd -Xcompression-level 19 || sudo mksquashfs $BUILD_DIR/squashfs-root $BUILD_DIR/extracted_iso/casper/filesystem.squashfs
+# Usando a compressão padrão com múltiplos processadores para máxima velocidade
+sudo mksquashfs $BUILD_DIR/squashfs-root $BUILD_DIR/extracted_iso/casper/filesystem.squashfs -noappend -b 1048576 -comp zstd || sudo mksquashfs $BUILD_DIR/squashfs-root $BUILD_DIR/extracted_iso/casper/filesystem.squashfs -noappend
 
 echo "[GMOS] 9. Atualizando metadados da ISO..."
 sudo su -c "printf \$(sudo du -sx --block-size=1 $BUILD_DIR/squashfs-root | awk '{print \$1}') > $BUILD_DIR/extracted_iso/casper/filesystem.size"

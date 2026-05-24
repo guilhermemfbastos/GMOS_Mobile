@@ -1,0 +1,4 @@
+[0;32m[INFO] Iniciando compilação do GM OS 1.0 (Baseado no Alpine Linux)...[0m
+[0;32m[INFO] Executando contêiner de compilação...[0m
+docker: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?.
+See 'docker run --help'.

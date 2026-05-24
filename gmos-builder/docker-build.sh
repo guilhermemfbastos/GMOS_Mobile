@@ -3,7 +3,7 @@ set -e
 
 echo "[DOCKER] Instalando ferramentas de compilação do Alpine..."
 apk update
-apk add git abuild alpine-conf syslinux xorriso squashfs-tools grub mtools sudo doas
+apk add git abuild alpine-conf syslinux xorriso squashfs-tools grub mtools sudo doas bash
 
 # O abuild requer um usuário não-root no grupo abuild
 echo "[DOCKER] Configurando usuário construtor..."
@@ -36,9 +36,33 @@ fi
 
 # Instalando os scripts personalizados do GM OS
 echo "[DOCKER] Aplicando o perfil GM OS..."
+
+# Copia o script mkimg.gmos.sh para a pasta de scripts
 cp /workspace/gmos-builder/mkimg.gmos.sh /workspace/aports/scripts/
+chmod +x /workspace/aports/scripts/mkimg.gmos.sh
+
+# Copia o script genapkovl-gmos.sh para a pasta de scripts
 cp /workspace/gmos-builder/genapkovl-gmos.sh /workspace/aports/scripts/
 chmod +x /workspace/aports/scripts/genapkovl-gmos.sh
+
+# Copia o script xfce-mint-config.sh para ser instalado na ISO
+cp /workspace/gmos-builder/xfce-mint-config.sh /workspace/aports/scripts/
+chmod +x /workspace/aports/scripts/xfce-mint-config.sh
+
+# Registra o perfil GM OS na lista de perfis disponíveis
+echo "[DOCKER] Registrando perfil gmos..."
+if ! grep -q "gmos)" /workspace/aports/scripts/mkimage.sh 2>/dev/null; then
+    # Adiciona o perfil gmos ao case statement do mkimage.sh
+    sed -i '/^case "\$PROFILE" in/i\
+# GM OS Profile\
+gmos)\
+    . "$SCRIPT_DIR/mkimg.gmos.sh"\
+    profile_gmos\
+    ;;' /workspace/aports/scripts/mkimage.sh
+    echo "[DOCKER] Perfil gmos adicionado ao mkimage.sh"
+else
+    echo "[DOCKER] Perfil gmos já está registrado no mkimage.sh"
+fi
 
 # Compilando a ISO
 cd /workspace/aports/scripts
@@ -50,6 +74,11 @@ for r in $(cat /etc/apk/repositories); do
     esac
 done
 
-su builder -c "export MKSQUASHFS_OPTS='-noI -noD -noF -no-fragments'; sh mkimage.sh --tag 1.0 --outdir /workspace/output --profile gmos $REPOS"
+# Exporta variáveis necessárias para o build
+export MKSQUASHFS_OPTS='-noI -noD -noF -no-fragments'
+export APK_OVERLAY_FROM="0"
+
+# Executa o build com o perfil gmos
+su builder -c "cd /workspace/aports/scripts && export MKSQUASHFS_OPTS='-noI -noD -noF -no-fragments' && sh mkimage.sh --tag 1.0 --outdir /workspace/output --profile gmos $REPOS"
 
 echo "[DOCKER] Compilação concluída!"

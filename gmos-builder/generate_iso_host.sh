@@ -6,7 +6,7 @@ echo "[GMOS] Iniciando a geração da ISO Customizada!"
 echo "[GMOS] =========================================="
 
 sudo apt-get update
-sudo apt-get install -y xorriso squashfs-tools bsdtar isolinux
+sudo apt-get install -y xorriso squashfs-tools libarchive-tools isolinux
 
 # Monta o disco onde a VM exportou os arquivos
 echo "[GMOS] Montando workspace.img localmente..."

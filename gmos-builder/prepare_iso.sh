@@ -4,7 +4,7 @@
 echo "[GMOS] Iniciando a exportação das customizações para o disco virtual..."
 
 # Encontrar o disco virtual formatado em ext4 (criado no Codespace)
-DISK=$(blkid | grep ext4 | cut -d: -f1 | head -n 1)
+DISK=$(sudo blkid | grep ext4 | cut -d: -f1 | head -n 1)
 
 if [ -z "$DISK" ]; then
     echo "[ERRO] Disco virtual (workspace.img) não encontrado na VM!"

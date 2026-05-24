@@ -46,6 +46,16 @@ sudo umount $BUILD_DIR/squashfs-root/proc
 sudo umount $BUILD_DIR/squashfs-root/dev
 sudo rm -f $BUILD_DIR/squashfs-root/root/chroot_setup.sh
 
+echo "[GMOS] 7.5 Atualizando Bootloader (ISOLINUX e Initramfs)..."
+# Copia o novo kernel e initramfs (que contém o novo plymouth) do chroot para a base do Live CD
+sudo cp $(ls -1 $BUILD_DIR/squashfs-root/boot/vmlinuz-* | head -n 1) $BUILD_DIR/extracted_iso/casper/vmlinuz 2>/dev/null || true
+sudo cp $(ls -1 $BUILD_DIR/squashfs-root/boot/initrd.img-* | head -n 1) $BUILD_DIR/extracted_iso/casper/initrd.lz 2>/dev/null || true
+
+# Substitui as imagens de background do menu do boot (ISOLINUX/Grub)
+if [ -f gmos_boot_splash.png ]; then
+    sudo find $BUILD_DIR/extracted_iso/isolinux/ $BUILD_DIR/extracted_iso/boot/grub/ -type f \( -iname "*.png" -o -iname "*.jpg" \) -exec cp gmos_boot_splash.png {} \; 2>/dev/null || true
+fi
+
 echo "[GMOS] 8. Recompactando o sistema de arquivos (Isso demora alguns minutos)..."
 sudo rm -f $BUILD_DIR/extracted_iso/casper/filesystem.squashfs
 # Usando a compressão padrão com múltiplos processadores para máxima velocidade

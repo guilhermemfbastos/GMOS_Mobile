@@ -1,116 +1,143 @@
 #!/bin/bash
+# ==============================================================================
+# GM OS Builder - Versão Nativa Debian/Ubuntu
+# ==============================================================================
+# Este script compila a ISO do GM OS diretamente em sistemas baseados em Debian
+# usando live-build, sem necessidade de Docker ou Alpine Linux.
+# ==============================================================================
+
 set -e
 
+# Cores para output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-NC='\033[0m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
-echo -e "${GREEN}[INFO] Iniciando compilação do GM OS 1.0...${NC}"
+# Configurações
+VERSION="1.0"
+ISO_NAME="GM_OS_${VERSION}.iso"
+BUILD_DIR="$(pwd)/build_area"
+OUTPUT_DIR="$(pwd)/output"
 
-# Detecta o sistema operacional
-if [ -f /etc/os-release ]; then
-    . /etc/os-release
-    OS_ID=$ID
-else
-    OS_ID="unknown"
+log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
+log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
+log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
+log_error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
+
+# Verifica se está rodando como root (necessário para live-build)
+if [ "$EUID" -ne 0 ]; then 
+    log_error "Este script precisa ser executado como root (sudo). Execute: sudo ./build_gmos.sh"
 fi
 
-# Instala pacotes necessários diretamente no sistema
-echo -e "${GREEN}[INFO] Instalando ferramentas de build...${NC}"
+log_info "Iniciando compilação do GM OS ${VERSION} (Nativo em Debian/Ubuntu)..."
 
-if [ "$OS_ID" = "alpine" ]; then
-    apk update
-    apk add git abuild alpine-conf syslinux xorriso squashfs-tools grub mtools sudo doas bash
-    
-    # Configura usuário builder
-    if ! id -u builder >/dev/null 2>&1; then
-        echo -e "${GREEN}[INFO] Criando usuário builder...${NC}"
-        adduser -D -g "Builder" builder
-        addgroup builder abuild
-        echo "builder ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/builder
-        chmod 0440 /etc/sudoers.d/builder
+# ------------------------------------------------------------------------------
+# 1. Instalação de Dependências
+# ------------------------------------------------------------------------------
+log_info "Verificando e instalando dependências do sistema..."
 
-        # Configura chaves
-        mkdir -p /var/cache/distfiles
-        chgrp abuild /var/cache/distfiles
-        chmod g+w /var/cache/distfiles
+DEPS="live-build debootstrap xorriso squashfs-tools genisoimage wget curl"
+apt-get update -qq
+apt-get install -y $DEPS
 
-        su builder -c "abuild-keygen -a -i -n"
-    fi
-elif [ "$OS_ID" = "debian" ] || [ "$OS_ID" = "ubuntu" ]; then
-    echo -e "${YELLOW}[INFO] Sistema Debian/Ubuntu detectado. Adaptando comandos...${NC}"
-    
-    # Atualiza e instala dependências
-    apt-get update
-    apt-get install -y git xorriso squashfs-tools grub-pc-bin mtools dosfstools wget curl
-    
-    echo -e "${YELLOW}[WARN] Em Debian/Ubuntu, este script apenas prepara o ambiente.${NC}"
-    echo -e "${YELLOW}[WARN] Para compilar, você precisa estar em Alpine Linux ou usar Docker.${NC}"
-    echo -e "${GREEN}[INFO] Dependências instaladas. Agora você pode usar Docker ou uma VM Alpine.${NC}"
-    exit 0
-else
-    echo -e "${RED}[ERROR] Sistema operacional não suportado: $OS_ID${NC}"
-    echo -e "${RED}[INFO] Execute este script em Alpine Linux nativo.${NC}"
-    exit 1
+log_success "Dependências instaladas."
+
+# ------------------------------------------------------------------------------
+# 2. Preparação do Ambiente de Build
+# ------------------------------------------------------------------------------
+if [ -d "$BUILD_DIR" ]; then
+    log_warn "Limpando área de build anterior..."
+    rm -rf "$BUILD_DIR"
 fi
 
-# Clona aports se não existir
-cd /workspace
-if [ ! -d "aports" ]; then
-    echo -e "${GREEN}[INFO] Clonando repositório aports...${NC}"
-    git clone --depth=1 https://gitlab.alpinelinux.org/alpine/aports.git
+mkdir -p "$BUILD_DIR"
+mkdir -p "$OUTPUT_DIR"
+
+cd "$BUILD_DIR"
+
+# ------------------------------------------------------------------------------
+# 3. Configuração do Live-Build
+# ------------------------------------------------------------------------------
+log_info "Configurando estrutura do live-build..."
+
+# Inicializa o projeto live-build
+lb config \
+    --mode debian \
+    --archive-keyring /usr/share/keyrings/debian-archive-keyring.gpg \
+    --distribution bookworm \
+    --components main,contrib,non-free \
+    --architectures amd64 \
+    --binary-images iso-hybrid \
+    --iso-application "GM OS" \
+    --iso-publisher "Guilherme Bastos" \
+    --bootloaders "grub-efi,grub-pc" \
+    --debian-installer none \
+    --memtest none
+
+# ------------------------------------------------------------------------------
+# 4. Personalização (Chroot)
+# ------------------------------------------------------------------------------
+log_info "Personalizando o sistema (instalação de pacotes e configs)..."
+
+# Lista de pacotes básicos para o GM OS
+PACKAGES="linux-image-amd64 linux-headers-amd64 grub-pc grub-efi-amd64 systemd-sysv network-manager vim nano wget curl firmware-linux-nonfree"
+
+# Adiciona pacotes à lista de inclusão
+echo "$PACKAGES" >> config/package-lists/my.list.chroot
+
+# Script de personalização dentro do chroot
+cat << 'EOF' > config/hooks/my-custom.chroot
+#!/bin/bash
+# Scripts executados DENTRO do chroot durante o build
+
+echo "GM OS - Configurando sistema..."
+
+# Configurar usuário padrão
+useradd -m -s /bin/bash -G sudo gmuser
+echo "gmuser:gmuser" | chpasswd
+echo "gmuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Configurar hostname
+echo "gmos-mobile" > /etc/hostname
+
+# Mensagem de boas-vindas
+cat << 'WELCOME' > /etc/motd
+  ____   _   _   ___   _____ 
+ / ___| | | | | |_ _| | ____|
+| |  _  | |_| |  | |  |  _|  
+| |_| | |  _  |  | |  | |___ 
+ \____| |_| |_| |___| |_____|
+                            
+Bem-vindo ao GM OS Mobile v1.0
+WELCOME
+
+# Limpeza
+apt-get clean
+rm -rf /var/cache/apt/archives/*.deb
+EOF
+
+chmod +x config/hooks/my-custom.chroot
+
+# ------------------------------------------------------------------------------
+# 5. Construção da Imagem
+# ------------------------------------------------------------------------------
+log_info "Iniciando construção da imagem (isso pode demorar alguns minutos)..."
+
+# Executa o build
+lb build 2>&1 | tee "${OUTPUT_DIR}/build.log"
+
+# ------------------------------------------------------------------------------
+# 6. Finalização
+# ------------------------------------------------------------------------------
+if [ -f "live-image-amd64.hybrid.iso" ]; then
+    mv "live-image-amd64.hybrid.iso" "${OUTPUT_DIR}/${ISO_NAME}"
+    log_success "Build concluído com sucesso!"
+    log_info "ISO gerada em: ${OUTPUT_DIR}/${ISO_NAME}"
+    log_info "Tamanho: $(du -h "${OUTPUT_DIR}/${ISO_NAME}" | cut -f1)"
 else
-    echo -e "${GREEN}[INFO] Repositório aports já existe.${NC}"
+    log_error "Falha na geração da ISO. Verifique ${OUTPUT_DIR}/build.log para detalhes."
 fi
 
-# Copia scripts do GM OS
-echo -e "${GREEN}[INFO] Aplicando perfil GM OS...${NC}"
-cp /workspace/gmos-builder/mkimg.gmos.sh /workspace/aports/scripts/
-chmod +x /workspace/aports/scripts/mkimg.gmos.sh
-
-cp /workspace/gmos-builder/genapkovl-gmos.sh /workspace/aports/scripts/
-chmod +x /workspace/aports/scripts/genapkovl-gmos.sh
-
-cp /workspace/gmos-builder/xfce-mint-config.sh /workspace/aports/scripts/
-chmod +x /workspace/aports/scripts/xfce-mint-config.sh
-
-# Registra o perfil
-echo -e "${GREEN}[INFO] Registrando perfil gmos...${NC}"
-if ! grep -q "gmos)" /workspace/aports/scripts/mkimage.sh 2>/dev/null; then
-    # Adiciona o perfil gmos ao case statement do mkimage.sh
-    # O perfil deve ser inserido DENTRO do case, após a linha 'case "$PROFILE" in'
-    sed -i '/^case "\$PROFILE" in/a\
-    # GM OS Profile\
-    gmos)\
-        . "$SCRIPT_DIR/mkimg.gmos.sh"\
-        profile_gmos\
-        ;;' /workspace/aports/scripts/mkimage.sh
-    echo -e "${GREEN}[INFO] Perfil gmos registrado.${NC}"
-else
-    echo -e "${GREEN}[INFO] Perfil gmos já registrado.${NC}"
-fi
-
-# Cria diretório de saída
-mkdir -p /workspace/output
-
-# Build da ISO
-cd /workspace/aports/scripts
-echo -e "${GREEN}[INFO] Gerando ISO do GM OS...${NC}"
-
-REPOS=""
-for r in $(cat /etc/apk/repositories); do
-    case "$r" in
-        http*) REPOS="$REPOS --repository $r" ;;
-    esac
-done
-
-export MKSQUASHFS_OPTS='-noI -noD -noF -no-fragments'
-export APK_OVERLAY_FROM="0"
-
-su builder -c "cd /workspace/aports/scripts && export MKSQUASHFS_OPTS='-noI -noD -noF -no-fragments' && sh mkimage.sh --tag 1.0 --outdir /workspace/output --profile gmos $REPOS"
-
-echo -e "${GREEN}[INFO] =================================================================${NC}"
-echo -e "${GREEN}[INFO] GM OS 1.0 COMPILADO COM SUCESSO!${NC}"
-echo -e "${GREEN}[INFO] ISO disponível em: output/gmos-1.0-x86_64.iso${NC}"
-echo -e "${GREEN}[INFO] =================================================================${NC}"
+log_info "Processo finalizado."

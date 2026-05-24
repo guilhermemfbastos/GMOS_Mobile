@@ -3,29 +3,49 @@ set -e
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
 NC='\033[0m'
 
 echo -e "${GREEN}[INFO] Iniciando compilação do GM OS 1.0 (SEM DOCKER)...${NC}"
 
+# Detecta o sistema operacional
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    OS_ID=$ID
+else
+    OS_ID="unknown"
+fi
+
 # Instala pacotes necessários diretamente no sistema
 echo -e "${GREEN}[INFO] Instalando ferramentas de build...${NC}"
-apk update
-apk add git abuild alpine-conf syslinux xorriso squashfs-tools grub mtools sudo doas bash
 
-# Configura usuário builder
-if ! id -u builder >/dev/null 2>&1; then
-    echo -e "${GREEN}[INFO] Criando usuário builder...${NC}"
-    adduser -D -g "Builder" builder
-    addgroup builder abuild
-    echo "builder ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/builder
-    chmod 0440 /etc/sudoers.d/builder
+if [ "$OS_ID" = "alpine" ]; then
+    apk update
+    apk add git abuild alpine-conf syslinux xorriso squashfs-tools grub mtools sudo doas bash
     
-    # Configura chaves
-    mkdir -p /var/cache/distfiles
-    chgrp abuild /var/cache/distfiles
-    chmod g+w /var/cache/distfiles
-    
-    su builder -c "abuild-keygen -a -i -n"
+    # Configura usuário builder
+    if ! id -u builder >/dev/null 2>&1; then
+        echo -e "${GREEN}[INFO] Criando usuário builder...${NC}"
+        adduser -D -g "Builder" builder
+        addgroup builder abuild
+        echo "builder ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/builder
+        chmod 0440 /etc/sudoers.d/builder
+
+        # Configura chaves
+        mkdir -p /var/cache/distfiles
+        chgrp abuild /var/cache/distfiles
+        chmod g+w /var/cache/distfiles
+
+        su builder -c "abuild-keygen -a -i -n"
+    fi
+elif [ "$OS_ID" = "debian" ] || [ "$OS_ID" = "ubuntu" ]; then
+    echo -e "${GREEN}[INFO] Sistema Debian/Ubuntu detectado. Este script requer Alpine Linux nativo.${NC}"
+    echo -e "${YELLOW}[WARN] Para sistemas Debian/Ubuntu, use o script build_gmos.sh com Docker.${NC}"
+    exit 1
+else
+    echo -e "${RED}[ERROR] Sistema operacional não suportado: $OS_ID${NC}"
+    echo -e "${RED}[INFO] Use Docker ou execute em Alpine Linux nativo.${NC}"
+    exit 1
 fi
 
 # Clona aports se não existir
@@ -49,13 +69,16 @@ cp /workspace/gmos-builder/xfce-mint-config.sh /workspace/aports/scripts/
 chmod +x /workspace/aports/scripts/xfce-mint-config.sh
 
 # Registra o perfil
+echo -e "${GREEN}[INFO] Registrando perfil gmos...${NC}"
 if ! grep -q "gmos)" /workspace/aports/scripts/mkimage.sh 2>/dev/null; then
-    sed -i '/^case "\$PROFILE" in/i\
-# GM OS Profile\
-gmos)\
-    . "$SCRIPT_DIR/mkimg.gmos.sh"\
-    profile_gmos\
-    ;;' /workspace/aports/scripts/mkimage.sh
+    # Adiciona o perfil gmos ao case statement do mkimage.sh
+    # O perfil deve ser inserido DENTRO do case, após a linha 'case "$PROFILE" in'
+    sed -i '/^case "\$PROFILE" in/a\
+    # GM OS Profile\
+    gmos)\
+        . "$SCRIPT_DIR/mkimg.gmos.sh"\
+        profile_gmos\
+        ;;' /workspace/aports/scripts/mkimage.sh
     echo -e "${GREEN}[INFO] Perfil gmos registrado.${NC}"
 else
     echo -e "${GREEN}[INFO] Perfil gmos já registrado.${NC}"

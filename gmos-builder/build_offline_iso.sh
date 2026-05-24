@@ -41,10 +41,17 @@ echo "[GMOS] 6. Executando customização interna via chroot..."
 sudo chroot $BUILD_DIR/squashfs-root /bin/bash /root/chroot_setup.sh
 
 echo "[GMOS] 7. Desmontando sistemas de arquivos virtuais e limpando rastros..."
-sudo umount $BUILD_DIR/squashfs-root/sys
-sudo umount $BUILD_DIR/squashfs-root/proc
-sudo umount $BUILD_DIR/squashfs-root/dev
+sudo umount $BUILD_DIR/squashfs-root/sys || true
+sudo umount $BUILD_DIR/squashfs-root/proc || true
+sudo umount $BUILD_DIR/squashfs-root/dev || true
 sudo rm -f $BUILD_DIR/squashfs-root/root/chroot_setup.sh
+
+# Limpa sockets e arquivos de lock gerados no chroot (Evita o erro "Failed to start disk manager")
+sudo rm -rf $BUILD_DIR/squashfs-root/run/*
+sudo rm -rf $BUILD_DIR/squashfs-root/tmp/*
+sudo rm -rf $BUILD_DIR/squashfs-root/var/run/*
+sudo rm -rf $BUILD_DIR/squashfs-root/var/tmp/*
+sudo rm -rf $BUILD_DIR/squashfs-root/var/crash/*
 
 echo "[GMOS] 7.5 Atualizando Bootloader (ISOLINUX e Initramfs)..."
 # Copia o novo kernel e initramfs (que contém o novo plymouth) do chroot para a base do Live CD

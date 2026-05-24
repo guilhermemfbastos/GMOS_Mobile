@@ -36,8 +36,14 @@ echo "[GMOS-CHROOT] Criando script de auto-configuração no login..."
 
 cat << 'EOF' > /usr/local/bin/gmos-first-boot.sh
 #!/bin/bash
-# Aguarda o painel iniciar
-sleep 2
+
+# Aguarda o painel XFCE iniciar completamente
+while ! pgrep -x xfce4-panel > /dev/null; do sleep 1; done
+sleep 3
+
+# Configura o ambiente para que o xfconf funcione em background
+export DISPLAY=:0
+export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u)/bus"
 
 # Temas e icones
 xfconf-query -c xsettings -p /Net/ThemeName -s "Mint-Y" 2>/dev/null || true
